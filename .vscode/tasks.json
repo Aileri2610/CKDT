@@ -1,0 +1,30 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "cppbuild",
+      "label": "Build protocol",
+      "command": "D:/mingw64/bin/g++.exe",
+      "args": [
+        "-std=c++17",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-pedantic",
+        "${workspaceFolder}/protocol.cpp",
+        "-o",
+        "${workspaceFolder}/protocol.exe"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    }
+  ]
+}

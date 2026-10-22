@@ -1,0 +1,115 @@
+﻿{
+    "version":  "0.2.0",
+    "configurations":  [
+                           {
+                               "name":  "Debug protocol",
+                               "type":  "cppdbg",
+                               "request":  "launch",
+                               "args":  [
+
+                                        ],
+                               "stopAtEntry":  false,
+                               "externalConsole":  true,
+                               "cwd":  "${workspaceFolder}",
+                               "program":  "${workspaceFolder}/protocol.exe",
+                               "MIMode":  "gdb",
+                               "miDebuggerPath":  "D:/mingw64/bin/gdb.exe",
+                               "setupCommands":  [
+                                                     {
+                                                         "description":  "Enable pretty-printing for gdb",
+                                                         "text":  "-enable-pretty-printing",
+                                                         "ignoreFailures":  true
+                                                     }
+                                                 ],
+                               "preLaunchTask":  "Build protocol"
+                           },
+                           {
+                               "name":  "Debug protocol (Runner)",
+                               "type":  "cppdbg",
+                               "request":  "launch",
+                               "args":  [
+
+                                        ],
+                               "stopAtEntry":  false,
+                               "externalConsole":  true,
+                               "cwd":  "${workspaceFolder}",
+                               "program":  "${workspaceFolder}/protocol.exe",
+                               "MIMode":  "gdb",
+                               "miDebuggerPath":  "D:/mingw64/bin/gdb.exe",
+                               "setupCommands":  [
+                                                     {
+                                                         "description":  "Enable pretty-printing for gdb",
+                                                         "text":  "-enable-pretty-printing",
+                                                         "ignoreFailures":  true
+                                                     }
+                                                 ],
+                               "preLaunchTask":  "Build protocol"
+                           },
+                           {
+                               "name":  "Debug protocol (Legacy)",
+                               "type":  "cppdbg",
+                               "request":  "launch",
+                               "args":  [
+
+                                        ],
+                               "stopAtEntry":  false,
+                               "externalConsole":  true,
+                               "cwd":  "${workspaceFolder}",
+                               "program":  "${workspaceFolder}/protocol.exe",
+                               "MIMode":  "gdb",
+                               "miDebuggerPath":  "D:/mingw64/bin/gdb.exe",
+                               "setupCommands":  [
+                                                     {
+                                                         "description":  "Enable pretty-printing for gdb",
+                                                         "text":  "-enable-pretty-printing",
+                                                         "ignoreFailures":  true
+                                                     }
+                                                 ],
+                               "preLaunchTask":  "Build protocol"
+                           },
+                           {
+                               "name":  "Debug protocol (C/C++ Runner)",
+                               "type":  "cppdbg",
+                               "request":  "launch",
+                               "args":  [
+
+                                        ],
+                               "stopAtEntry":  false,
+                               "externalConsole":  true,
+                               "cwd":  "${workspaceFolder}",
+                               "program":  "${workspaceFolder}/protocol.exe",
+                               "MIMode":  "gdb",
+                               "miDebuggerPath":  "D:/mingw64/bin/gdb.exe",
+                               "setupCommands":  [
+                                                     {
+                                                         "description":  "Enable pretty-printing for gdb",
+                                                         "text":  "-enable-pretty-printing",
+                                                         "ignoreFailures":  true
+                                                     }
+                                                 ],
+                               "preLaunchTask":  "Build protocol"
+                           },
+                           {
+                               "name":  "C/C++ Runner: Debug Session",
+                               "type":  "cppdbg",
+                               "request":  "launch",
+                               "args":  [
+
+                                        ],
+                               "stopAtEntry":  false,
+                               "externalConsole":  true,
+                               "cwd":  "${workspaceFolder}",
+                               "program":  "${workspaceFolder}/protocol.exe",
+                               "MIMode":  "gdb",
+                               "miDebuggerPath":  "D:/mingw64/bin/gdb.exe",
+                               "setupCommands":  [
+                                                     {
+                                                         "description":  "Enable pretty-printing for gdb",
+                                                         "text":  "-enable-pretty-printing",
+                                                         "ignoreFailures":  true
+                                                     }
+                                                 ],
+                               "preLaunchTask":  "Build protocol"
+                           }
+                       ]
+}

@@ -1,0 +1,21 @@
+{
+    "configurations": [
+        {
+            "name": "windows-gcc-x64",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "D:/mingw64/include/**",
+                "D:/mingw64/x86_64-w64-mingw32/include/**",
+                "D:/mingw64/include/c++/16.2.0/**",
+                "D:/mingw64/include/c++/16.2.0/x86_64-w64-mingw32/**",
+                "D:/mingw64/lib/gcc/x86_64-w64-mingw32/16.2.0/include/**",
+                "D:/mingw64/lib/gcc/x86_64-w64-mingw32/16.2.0/include-fixed/**"
+            ],
+            "compilerPath": "D:/mingw64/bin/g++.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++20",
+            "intelliSenseMode": "windows-gcc-x64"
+        }
+    ],
+    "version": 4
+}
