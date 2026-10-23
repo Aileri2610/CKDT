@@ -1,12 +1,14 @@
 #include <iostream>
 #include <vector>
 #include <unistd.h>
+#include <iomanip>
 #include <cstdint>
 #include <algorithm>
 using namespace std;
 
 uint8_t expected_seq = 0;
 uint32_t lost_frames = 0;
+bool sequence_initialized = false;
 
 enum class ParseResult{
     COMPLETE,
@@ -16,9 +18,11 @@ enum class ParseResult{
 };
 
 int PRBS7(uint16_t& state) {
+    int output = (state >> 6) & 1;
+
     int feedback = ((state >> 6) & 1) ^ ((state >> 5) & 1);
     state = ((state << 1) & 0x7F) | feedback;
-    return feedback;
+    return output;
 }
 
 void verifyPRBS7Cycle() {
@@ -41,17 +45,16 @@ void verifyPRBS7Cycle() {
 }
 
 uint16_t prbs_state = 0x7F;
-vector<uint8_t> makePayload(uint16_t &state) {
-    vector<uint8_t> payload(4);
 
-    for (int i = 0; i < 4; i++) {
-        uint8_t byte = 0;
-        for (int j = 0; j < 8; j++) {
-            byte = (byte << 1) | PRBS7(state);
-        }
-        payload[i] = byte;
+vector<uint8_t> generatePayload(uint8_t seq){
+    uint16_t state = (seq % 127) + 1;
+
+    vector<uint8_t> payload(4,0);
+
+    for(int i = 0; i < 32; i++){
+        int bit = PRBS7(state);
+        payload[i/8] |= static_cast<uint8_t>(bit << (7 - i % 8));
     }
-
     return payload;
 }
 
@@ -102,6 +105,8 @@ bool validateFrame(const vector<uint8_t> &frame);
 void processReceivedData(vector<uint8_t> &rx_buffer);
 void appendAndProcess(vector<uint8_t> &rx_buffer, const vector<uint8_t> &incoming);
 void checkSequence(uint8_t received_seq);
+uint8_t popcount8(uint8_t x);
+uint32_t countBitErrors(const vector<uint8_t> &expected, const vector<uint8_t> &received);
 
 int findSYNC(const vector<uint8_t> &buffer){
     if(buffer.size() < 2){
@@ -116,11 +121,24 @@ int findSYNC(const vector<uint8_t> &buffer){
     return -1;
 }
 
+void printPayload(const vector<uint8_t>& payload) {
+    for (uint8_t byte : payload) {
+        cout << hex
+             << uppercase
+             << setw(2)
+             << setfill('0')
+             << static_cast<int>(byte)
+             << ' ';
+    }
+
+    cout << dec << '\n';
+}
+
 int main() {
     verifyPRBS7Cycle();
 
     uint16_t prbs_state = 0x7F;
-    auto payload = makePayload(prbs_state);
+    auto payload = generatePayload(prbs_state);
     vector<uint8_t> frame = buildFrame(0x01, 10, payload);
     cout << "8 bit dau tien cua frame(MSB first): ";
     for(int i = 0; i<8; i++){
@@ -157,6 +175,24 @@ int main() {
 
     cout << "\nRemaining bytes in buffer: " << rx_buffer.size() << '\n';
 
+
+    cout << endl;
+    auto received = generatePayload(10);
+    auto expected = generatePayload(10);
+    auto p3 = generatePayload(11);
+    received[0] ^= 0x01;
+
+    cout << "SEQ = 10, lan 1: ";
+    printPayload(received);
+
+    cout << "SEQ = 10, lan 2: ";
+    printPayload(expected);
+
+    cout << "SEQ = 11:       ";
+    printPayload(p3);
+    uint32_t errors = countBitErrors(expected, received);
+
+    cout << endl << errors << endl;
     return 0;
 }
 
@@ -228,6 +264,11 @@ void appendAndProcess(vector<uint8_t> &rx_buffer, const vector<uint8_t> &incomin
 }
 
 void checkSequence(uint8_t received_seq) {
+    if (!sequence_initialized) {
+        expected_seq = received_seq;
+        sequence_initialized = true;
+    }
+
     uint8_t missing = static_cast<uint8_t>(received_seq - expected_seq);
 
     if (missing == 0) {
@@ -243,4 +284,25 @@ void checkSequence(uint8_t received_seq) {
 
     // Frame hiện tại đã được xử lý; frame tiếp theo được mong đợi.
     expected_seq = static_cast<uint8_t>(received_seq + 1);
+}
+
+uint8_t popcount8(uint8_t x){
+    uint8_t count = 0;
+    while(x != 0){
+        x &= static_cast<uint8_t>(x-1);
+        ++count;
+    }
+    return count;
+}
+
+uint32_t countBitErrors(const vector<uint8_t> &expected, const vector<uint8_t> &received){
+    uint32_t count = 0;
+    if(expected.size() != 4 || received.size() != 4){
+        return 0xFFFFFFFF;
+    }
+    for(int i = 0; i < expected.size(); i++){
+        uint8_t errors = popcount8(expected[i] ^ received[i]);
+        count += errors;
+    }
+    return count;
 }
