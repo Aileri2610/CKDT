@@ -2,8 +2,11 @@
 #include <vector>
 #include <unistd.h>
 #include <cstdint>
-
+#include <algorithm>
 using namespace std;
+
+uint8_t expected_seq = 0;
+uint32_t lost_frames = 0;
 
 enum class ParseResult{
     COMPLETE,
@@ -81,20 +84,12 @@ int frameBit(const vector<uint8_t>& f, int i){
 }
 
 vector<uint8_t> buildFrame(uint8_t type, uint8_t seq, const vector<uint8_t>& payload){
-    vector<uint8_t> frame(10);
-    //SYNC
-    frame[0] = 0xEB;
-    frame[1] = 0x90;
-    //TYPE and SEQ 
-    frame[2] = type;
-    frame[3] = seq;
-
     //PAYLOAD 
-    for(int i = 0; i<4; i++){
-        frame[4+i] = payload[i];
+    if(payload.size() != 4){
+        return {};
     }
-
-    uint16_t crc = calculateFrameCRC(&frame[2], 6);
+    vector<uint8_t> frame = {0xEB, 0x90, type, seq, payload[0], payload[1], payload[2], payload[3], 0, 0};
+    uint16_t crc = calculateFrameCRC(frame.data() + 2, 6);
 
     frame[8] = (crc >> 8) & 0xFF;
     frame[9] = crc & 0xFF;
@@ -102,6 +97,24 @@ vector<uint8_t> buildFrame(uint8_t type, uint8_t seq, const vector<uint8_t>& pay
 }
 
 int findSYNC(const vector<uint8_t> &buffer);
+ParseResult parseFrame(vector<uint8_t> &rx_buffer, vector<uint8_t> &frame);
+bool validateFrame(const vector<uint8_t> &frame);
+void processReceivedData(vector<uint8_t> &rx_buffer);
+void appendAndProcess(vector<uint8_t> &rx_buffer, const vector<uint8_t> &incoming);
+void checkSequence(uint8_t received_seq);
+
+int findSYNC(const vector<uint8_t> &buffer){
+    if(buffer.size() < 2){
+        return -1;
+    }
+
+    for(size_t i = 0; i + 1 < buffer.size(); i++){
+        if(buffer[i] == 0xEB && buffer[i + 1] == 0x90){
+            return static_cast<int>(i);
+        }
+    }
+    return -1;
+}
 
 int main() {
     verifyPRBS7Cycle();
@@ -115,20 +128,36 @@ int main() {
     }
     cout << endl;
 
-    return 0;
-}
-//Ham tin hieu nhan RX
-int findSYNC(const vector<uint8_t> &buffer){
-    if(buffer.size() < 2){
-        return -1;
-    }
+    vector<uint8_t> rx_buffer;
 
-    for(size_t i = 0; i <= buffer.size() -2; i++){
-        if(buffer[i] == 0xEB && buffer[i+1] == 0x90){
-            return static_cast<int>(i);
-        }
-    }
-    return -1;
+    // Test 1: hai frame hợp lệ nối tiếp nhau (Đã truyền đủ 3 tham số: type, seq, payload)
+    cout << "=== Test 1: two valid frames ===\n";
+    auto f1 = buildFrame(0x01, 1, {0x12, 0x34, 0x56, 0x78});
+    auto f2 = buildFrame(0x01, 2, {0xAB, 0xCD, 0xEF, 0x01});
+
+    appendAndProcess(rx_buffer, f1);
+    appendAndProcess(rx_buffer, f2);
+
+    // Test 2: payload có chứa chuỗi EB 90.
+    cout << "\n=== Test 2: SYNC bytes inside payload ===\n";
+    auto f3 = buildFrame(0x01, 3, {0x11, 0xEB, 0x90, 0x22});
+    appendAndProcess(rx_buffer, f3);
+
+    // Test 3: frame lỗi CRC, theo sau bởi frame tốt.
+    cout << "\n=== Test 3: corrupted frame then valid frame ===\n";
+    auto bad = buildFrame(0x01, 4, {0x10, 0x20, 0x30, 0x40});
+    bad[5] ^= 0x01; // Lật một bit payload, không cập nhật CRC.
+
+    auto good = buildFrame(0x01, 5, {0xAA, 0xBB, 0xCC, 0xDD});
+
+    vector<uint8_t> combined = bad;
+    combined.insert(combined.end(), good.begin(), good.end());
+
+    appendAndProcess(rx_buffer, combined);
+
+    cout << "\nRemaining bytes in buffer: " << rx_buffer.size() << '\n';
+
+    return 0;
 }
 
 ParseResult parseFrame(vector<uint8_t> &rx_buffer, vector<uint8_t> &frame){
@@ -144,6 +173,9 @@ ParseResult parseFrame(vector<uint8_t> &rx_buffer, vector<uint8_t> &frame){
     }
 
     if(position > 0){
+        // vector<uint8_t> copy_buffer;
+        // copy_buffer.resize(rx_buffer.size());
+        // copy(rx_buffer.begin(), rx_buffer.end(), copy_buffer.begin());
         rx_buffer.erase(rx_buffer.begin(), rx_buffer.begin() + position);
     }
 
@@ -152,13 +184,11 @@ ParseResult parseFrame(vector<uint8_t> &rx_buffer, vector<uint8_t> &frame){
     }
     
     frame.assign(rx_buffer.begin(), rx_buffer.begin() + 10);
-    rx_buffer.erase(rx_buffer.begin(), rx_buffer.begin() + 10);
+    // rx_buffer.erase(rx_buffer.begin(), rx_buffer.begin() + 10);
     return ParseResult::COMPLETE;
 }
 
 bool validateFrame(const vector<uint8_t> &frame){
-    bool flag;
-
      if(frame.size() != 10){
         return false;
     }
@@ -170,4 +200,47 @@ bool validateFrame(const vector<uint8_t> &frame){
     uint16_t received_crc = (static_cast<uint16_t>(frame[8]) << 8) | frame[9];
 
     return (calculated_crc == received_crc);
+}
+
+void processReceivedData(vector<uint8_t> &rx_buffer){
+    vector<uint8_t> frame;
+    while(true){
+        ParseResult result = parseFrame(rx_buffer, frame);
+        if(result != ParseResult::COMPLETE){
+            break;
+        }
+        else{
+            if(!validateFrame(frame)){
+                cerr << "Invalid frame" << endl;
+                rx_buffer.erase(rx_buffer.begin(), rx_buffer.begin() + 1);
+            }else{
+                cout << "Valid frame" << " SEQ = " << static_cast<unsigned int>(frame[3]) << endl;
+                rx_buffer.erase(rx_buffer.begin(), rx_buffer.begin() + 10);
+                checkSequence(frame[3]);
+            }
+        }
+    }
+}
+
+void appendAndProcess(vector<uint8_t> &rx_buffer, const vector<uint8_t> &incoming){
+    rx_buffer.insert(rx_buffer.end(), incoming.begin(), incoming.end());
+    processReceivedData(rx_buffer);
+}
+
+void checkSequence(uint8_t received_seq) {
+    uint8_t missing = static_cast<uint8_t>(received_seq - expected_seq);
+
+    if (missing == 0) {
+        cout << "SEQ OK: " << static_cast<unsigned int>(received_seq)
+             << '\n';
+    } else {
+        lost_frames += missing;
+
+        cout << "Missing " << static_cast<unsigned int>(missing)
+             << " frame(s) before SEQ "
+             << static_cast<unsigned int>(received_seq) << '\n';
+    }
+
+    // Frame hiện tại đã được xử lý; frame tiếp theo được mong đợi.
+    expected_seq = static_cast<uint8_t>(received_seq + 1);
 }
