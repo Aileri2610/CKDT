@@ -5,6 +5,13 @@
 
 using namespace std;
 
+enum class ParseResult{
+    COMPLETE,
+    INCOMPLETE,
+    INVALID,
+    NO_SYNC
+};
+
 int PRBS7(uint16_t& state) {
     int feedback = ((state >> 6) & 1) ^ ((state >> 5) & 1);
     state = ((state << 1) & 0x7F) | feedback;
@@ -94,6 +101,8 @@ vector<uint8_t> buildFrame(uint8_t type, uint8_t seq, const vector<uint8_t>& pay
     return frame;
 }
 
+int findSYNC(const vector<uint8_t> &buffer);
+
 int main() {
     verifyPRBS7Cycle();
 
@@ -120,4 +129,45 @@ int findSYNC(const vector<uint8_t> &buffer){
         }
     }
     return -1;
+}
+
+ParseResult parseFrame(vector<uint8_t> &rx_buffer, vector<uint8_t> &frame){
+    int position = findSYNC(rx_buffer);
+
+    if(position == -1){
+        if(!rx_buffer.empty() && rx_buffer.back() == 0xEB){
+            rx_buffer = {0xEB};
+        }else{
+            rx_buffer.clear();
+        }
+        return ParseResult::NO_SYNC;
+    }
+
+    if(position > 0){
+        rx_buffer.erase(rx_buffer.begin(), rx_buffer.begin() + position);
+    }
+
+    if(rx_buffer.size() < 10){
+        return ParseResult::INCOMPLETE;
+    }
+    
+    frame.assign(rx_buffer.begin(), rx_buffer.begin() + 10);
+    rx_buffer.erase(rx_buffer.begin(), rx_buffer.begin() + 10);
+    return ParseResult::COMPLETE;
+}
+
+bool validateFrame(const vector<uint8_t> &frame){
+    bool flag;
+
+     if(frame.size() != 10){
+        return false;
+    }
+    if(frame[0] != 0xEB || frame[1] != 0x90 || frame[2] != 0x01){
+        return false;
+    }
+
+    uint16_t calculated_crc = calculateFrameCRC(frame.data() + 2, 6);
+    uint16_t received_crc = (static_cast<uint16_t>(frame[8]) << 8) | frame[9];
+
+    return (calculated_crc == received_crc);
 }
