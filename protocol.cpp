@@ -9,6 +9,11 @@ using namespace std;
 uint8_t expected_seq = 0;
 uint32_t lost_frames = 0;
 bool sequence_initialized = false;
+constexpr size_t FRAME_SIZE = 10;
+constexpr size_t PAYLOAD_OFFSET = 4;
+constexpr size_t PAYLOAD_SIZE = 4;
+constexpr uint8_t DATA_TYPE = 0x01;
+constexpr int MAX_CONSECUTIVE_ERRORS = 6;
 
 enum class ParseResult{
     COMPLETE,
@@ -16,6 +21,31 @@ enum class ParseResult{
     INVALID,
     NO_SYNC
 };
+
+enum RxState {
+    STATE_HUNT,
+    STATE_LOCKED
+};
+
+struct RxContext {
+    RxState state = STATE_HUNT;
+    uint8_t expected_seq = 0;       // SEQ kỳ vọng ở frame tiếp theo
+    uint32_t consecutive_errors = 0; // Đếm số frame lỗi liên tiếp để quyết định bỏ lock
+};
+
+struct BERStats {
+    uint64_t total_bit_errors = 0;
+    uint64_t total_bits_compared = 0;
+
+    uint64_t frames_received = 0;
+    uint64_t frames_crc_ok = 0;
+    uint64_t frames_crc_bad = 0;
+    uint64_t frames_seq_mismatch = 0;
+};
+
+double calculateBER(const BERStats &stats);
+void updateBER(BERStats &stats, const vector<uint8_t> &expected, const vector<uint8_t> &received);
+void processRxFrame(const vector<uint8_t> &frame, RxContext &rx, BERStats &stats);
 
 int PRBS7(uint16_t& state) {
     int output = (state >> 6) & 1;
@@ -306,3 +336,74 @@ uint32_t countBitErrors(const vector<uint8_t> &expected, const vector<uint8_t> &
     }
     return count;
 }
+
+double calculateBER(const BERStats &stats){
+    if(stats.total_bits_compared == 0){
+        return 0.0;
+    }
+    return static_cast<double>(stats.total_bit_errors) / stats.total_bits_compared;
+}
+
+void updateBER(BERStats &stats, const vector<uint8_t> &expected, const vector<uint8_t> &received){
+    if(expected.size() != 4 || received.size() != 4){
+        return ;
+    }
+    stats.total_bits_compared += 32;
+    stats.total_bit_errors += countBitErrors(expected, received);
+}
+
+void processRxFrame(const vector<uint8_t> &frame, RxContext &rx, BERStats &stats){
+    if(frame.size() < 10){
+        return;
+    }
+    stats.frames_received++;
+
+    bool crc_ok = validateFrame(frame);
+    if(!crc_ok){
+        stats.frames_crc_bad++;
+        if(rx.state == STATE_LOCKED){
+            rx.consecutive_errors++;
+            if(rx.state == STATE_LOCKED && rx.consecutive_errors >= MAX_CONSECUTIVE_ERRORS){
+                rx.state = STATE_HUNT;
+                rx.consecutive_errors = 0;
+                cerr << "Reset to HUNT!" << endl;
+            }
+        }
+        return;
+    }
+
+    stats.frames_crc_ok++;
+    uint8_t received_seq = frame[3];
+    vector<uint8_t> received_payload(frame.begin() + 4, frame.begin() + 8);
+
+    if(rx.state == STATE_HUNT){
+        rx.state = STATE_LOCKED;
+        rx.expected_seq = received_seq + 1; //Ki vong seq tiep theo = seq truoc + 1
+        rx.consecutive_errors = 0;
+
+        auto expected_payload = generatePayload(received_seq);
+        updateBER(stats, expected_payload, received_payload);
+        return;
+    }else if(rx.state == STATE_LOCKED){
+        if(received_seq == rx.expected_seq){
+            //Khop SEQ
+            rx.consecutive_errors = 0;
+            auto expected_payload = generatePayload(received_seq);
+            updateBER(stats, expected_payload, received_payload);
+            rx.expected_seq = received_seq + 1;
+        } else {
+            //Lech SEQ
+            stats.frames_seq_mismatch++;
+            rx.consecutive_errors++;
+            rx.expected_seq = received_seq + 1;
+            auto expected_payload = generatePayload(received_seq);
+
+            if(rx.consecutive_errors >= MAX_CONSECUTIVE_ERRORS){
+                rx.state = STATE_HUNT;
+                rx.consecutive_errors = 0;
+                cerr << "Reset to HUNT!" << endl;
+            }
+        }
+    }
+}
+
