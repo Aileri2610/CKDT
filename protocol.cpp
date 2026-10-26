@@ -1,6 +1,5 @@
 #include <iostream>
 #include <vector>
-#include <unistd.h>
 #include <iomanip>
 #include <cstdint>
 #include <algorithm>
@@ -8,14 +7,16 @@
 #include <cmath>
 using namespace std;
 
-uint8_t expected_seq = 0;
-uint32_t lost_frames = 0;
-bool sequence_initialized = false;
+// ============================================================
+// 1. Hằng số, enum, struct
+// ============================================================
+
 constexpr size_t FRAME_SIZE = 10;
 constexpr size_t PAYLOAD_OFFSET = 4;
 constexpr size_t PAYLOAD_SIZE = 4;
 constexpr uint8_t DATA_TYPE = 0x01;
-constexpr int MAX_CONSECUTIVE_ERRORS = 6;
+constexpr int SYNC_LOSS_THRESHOLD = 24;
+constexpr int MAX_BAD_SLOTS = 3;
 
 enum class ParseResult{
     COMPLETE,
@@ -32,33 +33,25 @@ enum RxState {
 struct RxContext {
     RxState state = STATE_HUNT;
     uint8_t expected_seq = 0;       // SEQ kỳ vọng ở frame tiếp theo
-    uint32_t consecutive_errors = 0; // Đếm số frame lỗi liên tiếp để quyết định bỏ lock
+    uint32_t bad_slots = 0;
 };
 
 struct BERStats {
     uint64_t total_bit_errors = 0;
     uint64_t total_bits_compared = 0;
-
     uint64_t frames_received = 0;
     uint64_t frames_crc_ok = 0;
     uint64_t frames_crc_bad = 0;
     uint64_t frames_seq_mismatch = 0;
+    uint64_t lost_frames = 0;
+    uint64_t seq_resyncs = 0;
 };
 
-double calculateBER(const BERStats &stats);
-void updateBER(BERStats &stats, const vector<uint8_t> &expected, const vector<uint8_t> &received);
-bool processRxFrame(const vector<uint8_t> &frame, RxContext &rx, BERStats &stats);
-void feedParses(vector<uint8_t> &input_buffer, const vector<uint8_t> &incoming, RxContext &rx, BERStats &stats);
-int findSYNC(const vector<uint8_t> &buffer);
-ParseResult parseFrame(vector<uint8_t> &rx_buffer, vector<uint8_t> &frame);
-bool validateFrame(const vector<uint8_t> &frame);
-void processReceivedData(vector<uint8_t> &rx_buffer);
-void appendAndProcess(vector<uint8_t> &rx_buffer, const vector<uint8_t> &incoming);
-void checkSequence(uint8_t received_seq);
-uint8_t popcount8(uint8_t x);
-uint32_t countBitErrors(const vector<uint8_t> &expected, const vector<uint8_t> &received);
-void simulateChannel(vector<uint8_t> &data, double ber, mt19937 &rng);
-void runChannelSimulation(double channel_ber, int num_frames);
+// ============================================================
+// 2. PRBS7 và các hàm tiện ích bit
+// ============================================================
+
+uint16_t prbs_state = 0x7F;
 
 int PRBS7(uint16_t& state) {
     int output = (state >> 6) & 1;
@@ -87,19 +80,49 @@ void verifyPRBS7Cycle() {
     cout << "[A-3] Tong so bit 1 trong chu ky: " << count_1 << " (Ky vọng: 64)\n\n";
 }
 
-uint16_t prbs_state = 0x7F;
-
-vector<uint8_t> generatePayload(uint8_t seq){
-    uint16_t state = (seq % 127) + 1;
-
-    vector<uint8_t> payload(4,0);
-
-    for(int i = 0; i < 32; i++){
-        int bit = PRBS7(state);
-        payload[i/8] |= static_cast<uint8_t>(bit << (7 - i % 8));
+uint8_t popcount8(uint8_t x){
+    uint8_t count = 0;
+    while(x != 0){
+        x &= static_cast<uint8_t>(x-1);
+        ++count;
     }
-    return payload;
+    return count;
 }
+
+uint32_t countBitErrors(const vector<uint8_t> &expected, const vector<uint8_t> &received){
+    uint32_t count = 0;
+    if(expected.size() != 4 || received.size() != 4){
+        return 0xFFFFFFFF;
+    }
+    for(int i = 0; i < expected.size(); i++){
+        uint8_t errors = popcount8(expected[i] ^ received[i]);
+        count += errors;
+    }
+    return count;
+}
+
+int frameBit(const vector<uint8_t>& f, int i){
+    int byte_index = i/8;
+    int bit_index = 7 - (i%8);
+    return (f[byte_index] >> bit_index) & 1;
+}
+
+void printPayload(const vector<uint8_t>& payload) {
+    for (uint8_t byte : payload) {
+        cout << hex
+             << uppercase
+             << setw(2)
+             << setfill('0')
+             << static_cast<int>(byte)
+             << ' ';
+    }
+
+    cout << dec << '\n';
+}
+
+// ============================================================
+// 3. CRC-16
+// ============================================================
 
 uint16_t updateCRC16(uint16_t crc, uint8_t data){
     crc ^= (uint16_t(data) << 8);
@@ -123,10 +146,20 @@ uint16_t calculateFrameCRC(const uint8_t* frameData, int length){
     return crc;
 }
 
-int frameBit(const vector<uint8_t>& f, int i){
-    int byte_index = i/8;
-    int bit_index = 7 - (i%8);
-    return (f[byte_index] >> bit_index) & 1;
+// ============================================================
+// 4. Tạo payload và frame
+// ============================================================
+
+vector<uint8_t> generatePayload(uint8_t seq){
+    uint16_t state = (seq % 127) + 1;
+
+    vector<uint8_t> payload(4,0);
+
+    for(int i = 0; i < 32; i++){
+        int bit = PRBS7(state);
+        payload[i/8] |= static_cast<uint8_t>(bit << (7 - i % 8));
+    }
+    return payload;
 }
 
 vector<uint8_t> buildFrame(uint8_t type, uint8_t seq, const vector<uint8_t>& payload){
@@ -142,6 +175,10 @@ vector<uint8_t> buildFrame(uint8_t type, uint8_t seq, const vector<uint8_t>& pay
     return frame;
 }
 
+// ============================================================
+// 5. Tìm SYNC & Validate frame
+// ============================================================
+
 int findSYNC(const vector<uint8_t> &buffer){
     if(buffer.size() < 2){
         return -1;
@@ -155,88 +192,23 @@ int findSYNC(const vector<uint8_t> &buffer){
     return -1;
 }
 
-void printPayload(const vector<uint8_t>& payload) {
-    for (uint8_t byte : payload) {
-        cout << hex
-             << uppercase
-             << setw(2)
-             << setfill('0')
-             << static_cast<int>(byte)
-             << ' ';
+bool validateFrame(const vector<uint8_t> &frame){
+     if(frame.size() != 10){
+        return false;
+    }
+    if(frame[0] != 0xEB || frame[1] != 0x90 || frame[2] != 0x01){
+        return false;
     }
 
-    cout << dec << '\n';
+    uint16_t calculated_crc = calculateFrameCRC(frame.data() + 2, 6);
+    uint16_t received_crc = (static_cast<uint16_t>(frame[8]) << 8) | frame[9];
+
+    return (calculated_crc == received_crc);
 }
 
-int main() {
-    verifyPRBS7Cycle();
-
-    uint16_t prbs_state = 0x7F;
-    auto payload = generatePayload(prbs_state);
-    vector<uint8_t> frame = buildFrame(0x01, 10, payload);
-    cout << "8 bit dau tien cua frame(MSB first): ";
-    for(int i = 0; i<8; i++){
-        cout << frameBit(frame, i);
-    }
-    cout << endl;
-
-    vector<uint8_t> rx_buffer;
-
-    // Test 1: hai frame hợp lệ nối tiếp nhau (Đã truyền đủ 3 tham số: type, seq, payload)
-    cout << "=== Test 1: two valid frames ===\n";
-    auto f1 = buildFrame(0x01, 1, {0x12, 0x34, 0x56, 0x78});
-    auto f2 = buildFrame(0x01, 2, {0xAB, 0xCD, 0xEF, 0x01});
-
-    appendAndProcess(rx_buffer, f1);
-    appendAndProcess(rx_buffer, f2);
-
-    // Test 2: payload có chứa chuỗi EB 90.
-    cout << "\n=== Test 2: SYNC bytes inside payload ===\n";
-    auto f3 = buildFrame(0x01, 3, {0x11, 0xEB, 0x90, 0x22});
-    appendAndProcess(rx_buffer, f3);
-
-    // Test 3: frame lỗi CRC, theo sau bởi frame tốt.
-    cout << "\n=== Test 3: corrupted frame then valid frame ===\n";
-    auto bad = buildFrame(0x01, 4, {0x10, 0x20, 0x30, 0x40});
-    bad[5] ^= 0x01; // Lật một bit payload, không cập nhật CRC.
-
-    auto good = buildFrame(0x01, 5, {0xAA, 0xBB, 0xCC, 0xDD});
-
-    vector<uint8_t> combined = bad;
-    combined.insert(combined.end(), good.begin(), good.end());
-
-    appendAndProcess(rx_buffer, combined);
-
-    cout << "\nRemaining bytes in buffer: " << rx_buffer.size() << '\n';
-
-
-    cout << endl;
-    auto received = generatePayload(10);
-    auto expected = generatePayload(10);
-    auto p3 = generatePayload(11);
-    received[0] ^= 0x01;
-
-    cout << "SEQ = 10, lan 1: ";
-    printPayload(received);
-
-    cout << "SEQ = 10, lan 2: ";
-    printPayload(expected);
-
-    cout << "SEQ = 11:       ";
-    printPayload(p3);
-    uint32_t errors = countBitErrors(expected, received);
-
-    cout << endl << errors << endl;
-
-    int num_frames = 2000;
-    cout << "=== TEST 1: Kênh lý tưởng (Không nhiễu) ===" << endl;
-    runChannelSimulation(0.0, num_frames);
-    cout << "\n=== TEST 2: Kênh nhiễu nhẹ (BER = 0.001) ===" << endl;
-    runChannelSimulation(0.001, num_frames);
-    cout << "\n=== TEST 3: Kênh nhiễu trung bình (BER = 0.01) ===" << endl;
-    runChannelSimulation(0.01, num_frames);
-    return 0;
-}
+// ============================================================
+// 6. Xử lý RX cũ (dùng cho test đơn giản) + checkSequence
+// ============================================================
 
 ParseResult parseFrame(vector<uint8_t> &rx_buffer, vector<uint8_t> &frame){
     int position = findSYNC(rx_buffer);
@@ -266,94 +238,19 @@ ParseResult parseFrame(vector<uint8_t> &rx_buffer, vector<uint8_t> &frame){
     return ParseResult::COMPLETE;
 }
 
-bool validateFrame(const vector<uint8_t> &frame){
-     if(frame.size() != 10){
+// ============================================================
+// 7. Thống kê BER
+// ============================================================
+
+bool calculateBER(const BERStats& stats, double& ber){
+    if (stats.total_bits_compared == 0) {
         return false;
     }
-    if(frame[0] != 0xEB || frame[1] != 0x90 || frame[2] != 0x01){
-        return false;
-    }
 
-    uint16_t calculated_crc = calculateFrameCRC(frame.data() + 2, 6);
-    uint16_t received_crc = (static_cast<uint16_t>(frame[8]) << 8) | frame[9];
+    ber = static_cast<double>(stats.total_bit_errors)
+        / stats.total_bits_compared;
 
-    return (calculated_crc == received_crc);
-}
-
-void processReceivedData(vector<uint8_t> &rx_buffer){
-    vector<uint8_t> frame;
-    while(true){
-        ParseResult result = parseFrame(rx_buffer, frame);
-        if(result != ParseResult::COMPLETE){
-            break;
-        }
-        else{
-            if(!validateFrame(frame)){
-                cerr << "Invalid frame" << endl;
-                rx_buffer.erase(rx_buffer.begin(), rx_buffer.begin() + 1);
-            }else{
-                cout << "Valid frame" << " SEQ = " << static_cast<unsigned int>(frame[3]) << endl;
-                rx_buffer.erase(rx_buffer.begin(), rx_buffer.begin() + 10);
-                checkSequence(frame[3]);
-            }
-        }
-    }
-}
-
-void appendAndProcess(vector<uint8_t> &rx_buffer, const vector<uint8_t> &incoming){
-    rx_buffer.insert(rx_buffer.end(), incoming.begin(), incoming.end());
-    processReceivedData(rx_buffer);
-}
-
-void checkSequence(uint8_t received_seq) {
-    if (!sequence_initialized) {
-        expected_seq = received_seq;
-        sequence_initialized = true;
-    }
-
-    uint8_t missing = static_cast<uint8_t>(received_seq - expected_seq);
-
-    if (missing == 0) {
-        cout << "SEQ OK: " << static_cast<unsigned int>(received_seq)
-             << '\n';
-    } else {
-        lost_frames += missing;
-
-        cout << "Missing " << static_cast<unsigned int>(missing)
-             << " frame(s) before SEQ "
-             << static_cast<unsigned int>(received_seq) << '\n';
-    }
-
-    // Frame hiện tại đã được xử lý; frame tiếp theo được mong đợi.
-    expected_seq = static_cast<uint8_t>(received_seq + 1);
-}
-
-uint8_t popcount8(uint8_t x){
-    uint8_t count = 0;
-    while(x != 0){
-        x &= static_cast<uint8_t>(x-1);
-        ++count;
-    }
-    return count;
-}
-
-uint32_t countBitErrors(const vector<uint8_t> &expected, const vector<uint8_t> &received){
-    uint32_t count = 0;
-    if(expected.size() != 4 || received.size() != 4){
-        return 0xFFFFFFFF;
-    }
-    for(int i = 0; i < expected.size(); i++){
-        uint8_t errors = popcount8(expected[i] ^ received[i]);
-        count += errors;
-    }
-    return count;
-}
-
-double calculateBER(const BERStats &stats){
-    if(stats.total_bits_compared == 0){
-        return 0.0;
-    }
-    return static_cast<double>(stats.total_bit_errors) / stats.total_bits_compared;
+    return true;
 }
 
 void updateBER(BERStats &stats, const vector<uint8_t> &expected, const vector<uint8_t> &received){
@@ -364,87 +261,364 @@ void updateBER(BERStats &stats, const vector<uint8_t> &expected, const vector<ui
     stats.total_bit_errors += countBitErrors(expected, received);
 }
 
-bool processRxFrame(const vector<uint8_t> &frame, RxContext &rx, BERStats &stats){
-    if(frame.size() != 10) return false;
-    
-    stats.frames_received++;
-    bool crc_ok = validateFrame(frame);
+// ============================================================
+// 8. processRxFrame / feedParses (HUNT / LOCKED)
+// ============================================================
 
-    if(!crc_ok){
-        stats.frames_crc_bad++;
-        if(rx.state == STATE_LOCKED){
-            rx.consecutive_errors++;
-            if(rx.consecutive_errors >= MAX_CONSECUTIVE_ERRORS){
-                rx.state = STATE_HUNT;
-                rx.consecutive_errors = 0;
-                cerr << "Reset to HUNT" << endl;
-            }
-        }
-        return false; // CRC lỗi
+size_t hammingDistance(
+    const vector<uint8_t>& a,
+    const vector<uint8_t>& b
+) {
+    if (a.size() != b.size()) {
+        return SIZE_MAX;
     }
 
-    stats.frames_crc_ok++;
-    uint8_t received_seq = frame[3];
-    vector<uint8_t> received_payload(frame.begin() + 4, frame.begin() + 8);
+    size_t distance = 0;
 
-    if(rx.state == STATE_HUNT){
+    for (size_t i = 0; i < a.size(); ++i) {
+        uint8_t diff = a[i] ^ b[i];
+
+        while (diff != 0) {
+            distance += diff & 1u;
+            diff >>= 1;
+        }
+    }
+
+    return distance;
+}
+
+bool processRxFrame(const vector<uint8_t>& frame, RxContext& rx, BERStats& stats){
+    if (frame.size() != FRAME_SIZE) {
+        return false;
+    }
+
+    const bool valid = validateFrame(frame);
+
+    // ==========================================
+    // 1. HUNT: Tìm một frame hợp lệ để bắt đồng bộ
+    // ==========================================
+    if (rx.state == STATE_HUNT) {
+        if (!valid) {
+            // Đây chỉ là ứng viên SYNC, chưa xác nhận được frame.
+            return false;
+        }
+
+        const uint8_t seq = frame[3];
+        stats.frames_received++;
+        stats.frames_crc_ok++;
+
         rx.state = STATE_LOCKED;
-        rx.expected_seq = static_cast<uint8_t>(received_seq + 1);
-        rx.consecutive_errors = 0;
-        auto expected_payload = generatePayload(received_seq);
-        updateBER(stats, expected_payload, received_payload);
+        rx.expected_seq = static_cast<uint8_t>(seq + 1);
+        rx.bad_slots = 0;
+
+        cout << "[HUNT -> LOCKED] "
+             << "Khoa khung thanh cong tai SEQ = "
+             << static_cast<unsigned int>(seq)
+             << endl;
+
         return true;
     }
 
-    if(received_seq == rx.expected_seq){
-        rx.consecutive_errors = 0;
-        auto expected_payload = generatePayload(received_seq);
-        updateBER(stats, expected_payload, received_payload);
-        rx.expected_seq = static_cast<uint8_t>(received_seq + 1);
-    } else {
-        stats.frames_seq_mismatch++;
-        rx.consecutive_errors++;
-        rx.expected_seq = static_cast<uint8_t>(received_seq + 1);
-        if(rx.consecutive_errors >= MAX_CONSECUTIVE_ERRORS){
-            rx.state = STATE_HUNT;
-            rx.consecutive_errors = 0;
-            cerr << "Reset to HUNT" << endl;
+    // ==========================================
+    // 2. LOCKED: Xử lý slot cố định FRAME_SIZE byte
+    // ==========================================
+
+    stats.frames_received++;
+
+    // SEQ chỉ đáng tin khi frame vượt qua xác thực.
+    const uint8_t seq_used = valid ? frame[3] : rx.expected_seq;
+
+    // Tạo frame tham chiếu gồm đủ 80 bit.
+    vector<uint8_t> expected_payload = generatePayload(seq_used);
+
+    vector<uint8_t> expected_frame = buildFrame(DATA_TYPE, seq_used, expected_payload);
+
+    // Đánh giá xem slot có còn phù hợp với ranh giới
+    // frame hiện tại hay không.
+    const size_t distance = hammingDistance(frame, expected_frame);
+
+    // ==========================================
+    // 3. Phát hiện dấu hiệu mất đồng bộ
+    // ==========================================
+    if (distance > SYNC_LOSS_THRESHOLD) {
+        rx.bad_slots++;
+
+        if (!valid) {
+            stats.frames_crc_bad++;
+        } else {
+            stats.frames_seq_mismatch++;
         }
+
+        cerr << "[WARNING] Slot nghi mat bam. Hamming = "
+             << distance
+             << ", bad_slots = "
+             << rx.bad_slots
+             << '\n';
+
+        if (rx.bad_slots >= MAX_BAD_SLOTS) {
+            rx.state = STATE_HUNT;
+            rx.bad_slots = 0;
+
+            cerr << "[LOCKED -> HUNT] "
+                 << "Mat bam khung, quay lai tim SYNC.\n";
+        }
+
+        // Không tính BER cho slot chưa đủ tin cậy.
+        // Không cập nhật expected_seq vì chưa chấp nhận slot.
+        return false;
     }
-    return true;
+
+    // Slot vẫn phù hợp với ranh giới hiện tại.
+    rx.bad_slots = 0;
+
+    // ==========================================
+    // 4. Tính BER trên payload 32 bit
+    // ==========================================
+    vector<uint8_t> received_payload(frame.begin() + PAYLOAD_OFFSET, frame.begin() + PAYLOAD_OFFSET + PAYLOAD_SIZE);
+
+    updateBER(stats, expected_payload, received_payload);
+
+    // ==========================================
+    // 5. Cập nhật thống kê và SEQ
+    // ==========================================
+    if (valid) {
+        stats.frames_crc_ok++;
+        if (frame[3] != rx.expected_seq) {
+            stats.frames_seq_mismatch++;
+            
+            // Thống kê số frame bị mất (giúp đo lường gói tin thất lạc)
+            uint8_t gap = static_cast<uint8_t>(frame[3] - rx.expected_seq);
+            if (gap > 0 && gap <= 127) {
+                stats.lost_frames += gap;
+            }else if(gap > 127){
+                stats.seq_resyncs++;
+            }
+        }
+    } else {
+        stats.frames_crc_bad++;
+    }
+
+    // Khi slot vẫn được chấp nhận, cập nhật SEQ.
+    rx.expected_seq = static_cast<uint8_t>(seq_used + 1);
+    return valid;
 }
 
 void feedParses(vector<uint8_t> &input_buffer, const vector<uint8_t> &incoming, RxContext &rx, BERStats &stats){
     input_buffer.insert(input_buffer.end(), incoming.begin(), incoming.end());
     while(true){
-        int position = findSYNC(input_buffer);
-        if(position == -1){
-            if(!input_buffer.empty() && input_buffer.back() == 0xEB){
-                input_buffer = {0xEB};
-            }else{
-                input_buffer.clear();
+        if(rx.state == RxState::STATE_HUNT){
+            int position = findSYNC(input_buffer);
+            if(position == -1){
+                if(!input_buffer.empty() && input_buffer.back() == 0xEB){
+                    input_buffer = {0xEB};
+                }else{
+                    input_buffer.clear();
+                }
+                return;
             }
-            return;
-        }
-        if(position > 0){
-            input_buffer.erase(input_buffer.begin(), input_buffer.begin() + position);
-        }
+            if(position > 0){
+                input_buffer.erase(input_buffer.begin(), input_buffer.begin() + position);
+            }
 
-        if(input_buffer.size() < 10){
-            return;
-        }
-        vector<uint8_t> frame;
-        frame.assign(input_buffer.begin(), input_buffer.begin() + 10);
-        bool success = processRxFrame(frame, rx, stats);
-        if(success){
+            if(input_buffer.size() < 10){
+                return;
+            }
+            vector<uint8_t> frame;
+            frame.assign(input_buffer.begin(), input_buffer.begin() + 10);
+            bool success = processRxFrame(frame, rx, stats);
+            if(success){
+                input_buffer.erase(input_buffer.begin(), input_buffer.begin() + 10);
+            }else{
+                input_buffer.erase(input_buffer.begin());
+            }
+        }else if(rx.state == RxState::STATE_LOCKED){
+            if(input_buffer.size() < 10){
+                return;
+            }
+            vector<uint8_t> slot(input_buffer.begin(), input_buffer.begin() + 10);
             input_buffer.erase(input_buffer.begin(), input_buffer.begin() + 10);
-        }else{
-            input_buffer.erase(input_buffer.begin());
+
+            processRxFrame(slot, rx, stats);
         }
     }
 }
 
-//Channel Simulation
+void testReceiverNoNoise(int num_frames) {
+    RxContext rx;
+    BERStats stats;
+    vector<uint8_t> input_buffer;
+
+    for (int i = 0; i < num_frames; ++i) {
+        uint8_t seq = static_cast<uint8_t>(i % 256);
+
+        vector<uint8_t> payload = generatePayload(seq);
+        vector<uint8_t> frame = buildFrame(DATA_TYPE, seq, payload);
+
+        feedParses(input_buffer, frame, rx, stats);
+    }
+
+    double ber = 0.0;
+
+    cout << "\n=== Receiver integration test: no noise ===\n";
+    cout << "Expected state: LOCKED\n";
+    cout << "Actual state: "
+         << (rx.state == STATE_LOCKED ? "LOCKED" : "HUNT")
+         << '\n';
+
+    cout << "Valid frames: " << stats.frames_crc_ok << '\n';
+    cout << "CRC-bad frames: " << stats.frames_crc_bad << '\n';
+    cout << "SEQ mismatches: " << stats.frames_seq_mismatch << '\n';
+    cout << "Lost frames: " << stats.lost_frames << '\n';
+
+    if (calculateBER(stats, ber)) {
+        cout << "Compared bits: " << stats.total_bits_compared << '\n';
+        cout << "Bit errors: " << stats.total_bit_errors << '\n';
+        cout << "Observed BER: " << ber << '\n';
+    } else {
+        cout << "BER: N/A\n";
+    }
+}
+
+
+void testSinglePayloadBitError() {
+    RxContext rx;
+    BERStats stats;
+    vector<uint8_t> input_buffer;
+
+    cout << "\n=== TEST A: Single payload bit error ===\n";
+
+    for (int i = 0; i < 5; ++i) {
+        uint8_t seq = static_cast<uint8_t>(i);
+
+        vector<uint8_t> payload = generatePayload(seq);
+        vector<uint8_t> frame = buildFrame(DATA_TYPE, seq, payload);
+
+        if (i == 2) {
+            // Lật bit thấp nhất của byte payload đầu tiên.
+            // Không tính lại CRC, để cố ý tạo frame CRC lỗi.
+            frame[4] ^= 0x01;
+        }
+
+        feedParses(input_buffer, frame, rx, stats);
+    }
+
+    double ber = 0.0;
+
+    cout << "Final state: "
+         << (rx.state == STATE_LOCKED ? "LOCKED" : "HUNT")
+         << '\n';
+    cout << "Frames received: " << stats.frames_received << '\n';
+    cout << "CRC OK: " << stats.frames_crc_ok << '\n';
+    cout << "CRC bad: " << stats.frames_crc_bad << '\n';
+    cout << "Compared bits: " << stats.total_bits_compared << '\n';
+    cout << "Bit errors: " << stats.total_bit_errors << '\n';
+
+    if (calculateBER(stats, ber)) {
+        cout << fixed << setprecision(6);
+        cout << "Measured BER: " << ber << '\n';
+    } else {
+        cout << "Measured BER: N/A\n";
+    }
+}
+
+
+void testSevereFrameError() {
+    RxContext rx;
+    BERStats stats;
+    vector<uint8_t> input_buffer;
+
+    cout << "\n=== TEST B: Severe frame errors ===\n";
+
+    for (int i = 0; i < 8; ++i) {
+        uint8_t seq = static_cast<uint8_t>(i);
+
+        vector<uint8_t> payload = generatePayload(seq);
+        vector<uint8_t> frame = buildFrame(DATA_TYPE, seq, payload);
+
+        // Làm hỏng payload và CRC của các frame 2, 3, 4.
+        if (i >= 2 && i <= 4) {
+            for (int j = 4; j < 10; ++j) {
+                frame[j] ^= 0xFF;
+            }
+        }
+
+        feedParses(input_buffer, frame, rx, stats);
+    }
+
+    cout << "Final state: "
+         << (rx.state == STATE_LOCKED ? "LOCKED" : "HUNT")
+         << '\n';
+    cout << "Frames received: " << stats.frames_received << '\n';
+    cout << "CRC OK: " << stats.frames_crc_ok << '\n';
+    cout << "CRC bad: " << stats.frames_crc_bad << '\n';
+    cout << "SEQ mismatches: " << stats.frames_seq_mismatch << '\n';
+    cout << "Lost frames: " << stats.lost_frames << '\n';
+}
+
+
+void testResyncWithSplitSync() {
+    RxContext rx;
+    BERStats stats;
+    vector<uint8_t> input_buffer;
+
+    cout << "\n=== TEST C: Resync with split SYNC ===\n";
+
+    // 1. Frame đầu tiên: khóa đồng bộ.
+    auto payload0 = generatePayload(0);
+    auto frame0 = buildFrame(DATA_TYPE, 0, payload0);
+    feedParses(input_buffer, frame0, rx, stats);
+
+    // 2. Ba slot lỗi nặng: kích hoạt LOCKED -> HUNT.
+    for (int i = 1; i <= 3; ++i) {
+        auto payload = generatePayload(static_cast<uint8_t>(i));
+        auto frame = buildFrame(
+            DATA_TYPE, static_cast<uint8_t>(i), payload
+        );
+
+        for (int j = 4; j < 10; ++j) {
+            frame[j] ^= 0xFF;
+        }
+
+        feedParses(input_buffer, frame, rx, stats);
+    }
+
+    cout << "State after severe errors: "
+         << (rx.state == STATE_HUNT ? "HUNT" : "LOCKED")
+         << '\n';
+
+    // 3. Gửi dữ liệu rác, kết thúc bằng byte EB.
+    vector<uint8_t> garbage = {
+        0x12, 0x34, 0x56, 0x78, 0xEB
+    };
+    feedParses(input_buffer, garbage, rx, stats);
+
+    cout << "Buffer after garbage: ";
+    printPayload(input_buffer);
+
+    // 4. Lần nhận tiếp theo bắt đầu bằng 90.
+    // Hai byte EB 90 tạo thành SYNC bị chia đôi.
+    auto payload4 = generatePayload(4);
+    auto frame4 = buildFrame(DATA_TYPE, 4, payload4);
+
+    vector<uint8_t> first_part = {0x90};
+    first_part.insert(
+        first_part.end(), frame4.begin() + 2, frame4.end()
+    );
+
+    feedParses(input_buffer, first_part, rx, stats);
+
+    cout << "Final state: "
+         << (rx.state == STATE_LOCKED ? "LOCKED" : "HUNT")
+         << '\n';
+    cout << "CRC OK: " << stats.frames_crc_ok << '\n';
+    cout << "CRC bad: " << stats.frames_crc_bad << '\n';
+    cout << "SEQ mismatches: " << stats.frames_seq_mismatch << '\n';
+}
+
+// ============================================================
+// 9. Mô phỏng kênh
+// ============================================================
+
 void simulateChannel(vector<uint8_t> &data, double ber, mt19937 &rng){
     bernoulli_distribution bit_error(ber);
     for(uint8_t &byte : data){
@@ -457,8 +631,7 @@ void simulateChannel(vector<uint8_t> &data, double ber, mt19937 &rng){
 }
 
 void runChannelSimulation(double channel_ber, int num_frames){
-    random_device rd;
-    mt19937 rng(rd());
+    mt19937 rng(12345);
 
     uint64_t total_bits_compared = 0;
     uint64_t total_bit_errors = 0;
@@ -507,4 +680,63 @@ void runChannelSimulation(double channel_ber, int num_frames){
 }
 
 
+void testReceiverWithNoise(double channel_ber, int num_frames) {
+    RxContext rx;
+    BERStats stats;
+    vector<uint8_t> input_buffer;
+    mt19937 rng(12345);
 
+    for (int i = 0; i < num_frames; ++i) {
+        uint8_t seq = static_cast<uint8_t>(i % 256);
+
+        vector<uint8_t> payload = generatePayload(seq);
+        vector<uint8_t> frame = buildFrame(DATA_TYPE, seq, payload);
+
+        simulateChannel(frame, channel_ber, rng);
+        feedParses(input_buffer, frame, rx, stats);
+    }
+
+    double ber = 0.0;
+
+    cout << "\n=== Receiver test with noise ===\n";
+    cout << fixed << setprecision(6);
+    cout << "Configured channel BER: " << channel_ber << '\n';
+    cout << "Final state: "
+         << (rx.state == STATE_LOCKED ? "LOCKED" : "HUNT") << '\n';
+    cout << "Frames received: " << stats.frames_received << '\n';
+    cout << "CRC OK: " << stats.frames_crc_ok << '\n';
+    cout << "CRC bad: " << stats.frames_crc_bad << '\n';
+    cout << "SEQ mismatches: " << stats.frames_seq_mismatch << '\n';
+    cout << "Lost frames: " << stats.lost_frames << '\n';
+
+    if (calculateBER(stats, ber)) {
+        cout << "Compared bits: " << stats.total_bits_compared << '\n';
+        cout << "Bit errors: " << stats.total_bit_errors << '\n';
+        cout << "Measured receiver BER: " << ber << '\n';
+    } else {
+        cout << "Measured receiver BER: N/A\n";
+    }
+}
+
+
+// ============================================================
+// 10. main()
+// ============================================================
+
+int main() {
+    int num_frames = 20000;
+    cout << "=== TEST 1: Kênh lý tưởng (Không nhiễu) ===" << endl;
+    runChannelSimulation(0.0, num_frames);
+    cout << "\n=== TEST 2: Kênh nhiễu nhẹ (BER = 0.001) ===" << endl;
+    runChannelSimulation(0.001, num_frames);
+    cout << "\n=== TEST 3: Kênh nhiễu trung bình (BER = 0.01) ===" << endl;
+    runChannelSimulation(0.01, num_frames);
+
+    cout << endl;
+    testReceiverNoNoise(100); cout << endl;
+    testReceiverWithNoise(0.01, 20000); cout << endl;
+    testSinglePayloadBitError();
+    testSevereFrameError();
+    testResyncWithSplitSync();
+    return 0;
+}
