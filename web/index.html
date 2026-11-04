@@ -1,0 +1,2825 @@
+<!DOCTYPE html>
+<html lang="vi">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+        <title>OCT – Optical Communication Tester</title>
+        <style>
+            :root {
+                --bg: #f4f6f9;
+                --fg: #1b1f24;
+                --card: #fff;
+                --mut: #5c6670;
+                --bd: #d9dee4;
+                --ac: #0a6cff;
+                --ok: #16883f;
+                --wa: #c27a00;
+                --bad: #d93025;
+                --c2: #0a8f8f;
+                box-sizing: border-box;
+                padding-top: env(safe-area-inset-top,0px);
+                padding-bottom: env(safe-area-inset-bottom,0px);
+                color-scheme: light
+            }
+
+            @media(prefers-color-scheme: dark) {
+                :root:not([data-theme="light"]) {
+                    --bg:#12151a;
+                    --fg: #e6e9ee;
+                    --card: #1b2027;
+                    --mut: #9aa5b1;
+                    --bd: #2f3742;
+                    --ac: #5b9bff;
+                    --ok: #4cc47a;
+                    --wa: #e8a93a;
+                    --bad: #ff6b5e;
+                    --c2: #3cc6c6;
+                    color-scheme: dark
+                }
+            }
+
+            :root[data-theme="dark"] {
+                --bg: #12151a;
+                --fg: #e6e9ee;
+                --card: #1b2027;
+                --mut: #9aa5b1;
+                --bd: #2f3742;
+                --ac: #5b9bff;
+                --ok: #4cc47a;
+                --wa: #e8a93a;
+                --bad: #ff6b5e;
+                --c2: #3cc6c6;
+                color-scheme: dark
+            }
+
+            html {
+                scroll-padding-top: env(safe-area-inset-top,0px)
+            }
+
+            * {
+                box-sizing: border-box
+            }
+
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: var(--fg);
+                font: 15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif
+            }
+
+            main {
+                max-width: 1100px;
+                margin: 0 auto;
+                padding: 12px
+            }
+
+            header {
+                display: flex;
+                gap: 8px;
+                align-items: flex-start;
+                justify-content: space-between;
+                flex-wrap: wrap
+            }
+
+            h1 {
+                font-size: 1.4rem;
+                margin: 4px 0
+            }
+
+            h2 {
+                font-size: 1.05rem;
+                margin: 0 0 8px
+            }
+
+            .sub {
+                color: var(--mut);
+                margin: 0
+            }
+
+            .note {
+                background: color-mix(in srgb,var(--wa) 14%,transparent);
+                border: 1px solid var(--wa);
+                border-radius: 8px;
+                padding: 8px 10px;
+                margin: 10px 0;
+                font-size: .9rem
+            }
+
+            .card {
+                background: var(--card);
+                border: 1px solid var(--bd);
+                border-radius: 10px;
+                padding: 12px;
+                margin: 12px 0
+            }
+
+            .g2 {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 12px
+            }
+
+            .g2>.card {
+                margin: 0
+            }
+
+            @media(max-width: 800px) {
+                .g2 {
+                    grid-template-columns:1fr
+                }
+            }
+
+            button {
+                font: inherit;
+                background: var(--card);
+                color: var(--fg);
+                border: 1px solid var(--bd);
+                border-radius: 8px;
+                padding: 6px 12px;
+                cursor: pointer
+            }
+
+            button.p {
+                background: var(--ac);
+                color: #fff;
+                border-color: var(--ac)
+            }
+
+            button.sel {
+                border-color: var(--ac);
+                outline: 2px solid var(--ac)
+            }
+
+            .blocks {
+                display: grid;
+                grid-template-columns: repeat(7,1fr);
+                gap: 6px
+            }
+
+            .blocks button {
+                padding: 8px 2px;
+                font-size: .78rem;
+                line-height: 1.2
+            }
+
+            @media(max-width: 700px) {
+                .blocks {
+                    grid-template-columns:repeat(2,1fr)
+                }
+            }
+
+            canvas {
+                width: 100%;
+                display: block
+            }
+
+            .row {
+                display: grid;
+                grid-template-columns: 1fr auto;
+                gap: 2px 8px;
+                margin-bottom: 8px
+            }
+
+            .row label {
+                font-weight: 600
+            }
+
+            .row output {
+                color: var(--ac);
+                font-variant-numeric: tabular-nums
+            }
+
+            .row input[type=range] {
+                grid-column: 1/3;
+                width: 100%
+            }
+
+            .btns {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                margin-top: 6px
+            }
+
+            dl {
+                display: grid;
+                grid-template-columns: 1fr auto;
+                gap: 4px 10px;
+                margin: 0
+            }
+
+            dt {
+                color: var(--mut)
+            }
+
+            dd {
+                margin: 0;
+                font-weight: 600;
+                text-align: right;
+                font-variant-numeric: tabular-nums
+            }
+
+            .sw {
+                display: grid;
+                grid-template-columns: repeat(3,1fr);
+                gap: 8px
+            }
+
+            @media(max-width: 800px) {
+                .sw {
+                    grid-template-columns:1fr
+                }
+            }
+
+            .sw canvas {
+                height: 170px
+            }
+
+            .tw {
+                overflow-x: auto
+            }
+
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                font-size: .88rem
+            }
+
+            th,td {
+                border-bottom: 1px solid var(--bd);
+                padding: 4px 8px;
+                text-align: right
+            }
+
+            pre {
+                background: var(--bg);
+                border: 1px solid var(--bd);
+                border-radius: 8px;
+                padding: 8px;
+                overflow-x: auto;
+                font-size: .82rem;
+                margin: 6px 0
+            }
+
+            textarea {
+                width: 100%;
+                height: 80px;
+                background: var(--bg);
+                color: var(--fg);
+                border: 1px solid var(--bd);
+                border-radius: 8px;
+                margin-top: 6px;
+                display: none
+            }
+
+            label.t {
+                display: flex;
+                gap: 8px;
+                align-items: center;
+                margin: 6px 0
+            }
+
+            .f3 {
+                position: relative;
+                aspect-ratio: 16/9;
+                min-height: 320px;
+                border-radius: 8px;
+                overflow: hidden;
+                background: #05070a
+            }
+
+            .f3 canvas {
+                width: 100%;
+                height: 100%;
+                display: block;
+                touch-action: none;
+                cursor: grab
+            }
+
+            #lb {
+                position: absolute;
+                inset: 0;
+                pointer-events: none
+            }
+
+            .lb {
+                position: absolute;
+                left: 0;
+                top: 0;
+                font-size: 11px;
+                padding: 1px 6px;
+                border-radius: 10px;
+                background: rgba(10,14,20,.78);
+                color: #fff;
+                white-space: nowrap;
+                border: 1px solid rgba(255,255,255,.35)
+            }
+
+            .sl3 {
+                position: absolute;
+                left: 8px;
+                bottom: 8px;
+                font-size: 12px;
+                color: #ffd24a;
+                background: rgba(10,14,20,.7);
+                border-radius: 6px;
+                padding: 0 6px
+            }
+
+            .sl3:empty {
+                display: none
+            }
+
+            #c3:focus-visible {
+                outline: 2px solid var(--ac);
+                outline-offset: -2px
+            }
+
+            .qb {
+                position: absolute;
+                right: 8px;
+                top: 8px;
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                padding: 0;
+                z-index: 3
+            }
+
+            .hp {
+                position: absolute;
+                right: 8px;
+                top: 42px;
+                max-width: 300px;
+                background: rgba(10,14,20,.92);
+                color: #fff;
+                font-size: 12px;
+                padding: 8px 10px;
+                border-radius: 8px;
+                z-index: 3
+            }
+
+            .hp[hidden] {
+                display: none
+            }
+
+            .tl {
+                position: absolute;
+                right: 8px;
+                bottom: 8px;
+                background: #0b0b0d;
+                border-radius: 8px;
+                padding: 6px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 4px;
+                color: #fff;
+                font-size: 10px;
+                max-width: 90px;
+                text-align: center;
+                z-index: 2
+            }
+
+            .tl span {
+                width: 14px;
+                height: 14px;
+                border-radius: 50%;
+                background: #3a3a3a;
+                display: block
+            }
+
+            @media (orientation: landscape) and (min-width:700px) {
+                body {
+                    overflow:hidden
+                }
+
+                main {
+                    display: grid;
+                    grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+                    gap: 12px;
+                    height: 100dvh;
+                    max-width: none;
+                    margin: 0;
+                    padding: calc(8px + env(safe-area-inset-top,0px)) calc(8px + env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) calc(8px + env(safe-area-inset-left,0px))
+                }
+
+                #lc {
+                    position: sticky;
+                    top: 0;
+                    height: 100%;
+                    display: flex;
+                    flex-direction: column;
+                    min-height: 0
+                }
+
+                #lc .card {
+                    margin: 0 0 8px
+                }
+
+                #lc #cd {
+                    display: none
+                }
+
+                #lc .blocks button {
+                    font-size: .68rem;
+                    padding: 5px 1px
+                }
+
+                #s3d {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    min-height: 0;
+                    margin: 0!important
+                }
+
+                #s3d .f3 {
+                    flex: 1;
+                    aspect-ratio: auto;
+                    min-height: 0
+                }
+
+                #rc {
+                    overflow-y: auto;
+                    height: 100%;
+                    min-height: 0;
+                    padding-right: 4px
+                }
+            }
+
+            footer {
+                color: var(--mut);
+                font-size: .85rem;
+                text-align: center;
+                padding: 10px 0 20px
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <div id="rc">
+                <header>
+                    <div>
+                        <h1 data-i="title"></h1>
+                        <p class="sub" data-i="sub"></p>
+                    </div>
+                    <div class="btns">
+                        <button id="bl">EN</button>
+                        <button id="bt">◐</button>
+                    </div>
+                </header>
+                <div class="note" data-i="disc"></div>
+                <div id="slot">
+                    <div id="lc">
+                        <section class="card">
+                            <h2 data-i="hd"></h2>
+                            <div class="blocks" id="blocks"></div>
+                            <canvas id="cd" style="height:110px;margin-top:8px"></canvas>
+                            <div id="info" style="margin-top:6px"></div>
+                        </section>
+                        <section class="card" id="s3d">
+                            <h2 data-i="h3"></h2>
+                            <div class="btns" style="margin-bottom:8px">
+                                <button id="v0" data-i="v0"></button>
+                                <button id="v1" data-i="v1"></button>
+                                <button id="v2" data-i="v2"></button>
+                                <button id="v3" data-i="v3"></button>
+                                <button id="bp"></button>
+                            </div>
+                            <div id="f3" class="f3">
+                                <canvas id="c3" tabindex="0"></canvas>
+                                <div id="lb"></div>
+                                <div id="sl3" class="sl3"></div>
+                                <button id="bq" class="qb">?</button>
+                                <div id="hp" class="hp" hidden></div>
+                                <div id="tl" class="tl">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                    <b id="tlt"></b>
+                                </div>
+                            </div>
+                            <div id="ng" class="sub" style="display:none" data-i="ng"></div>
+                            <div class="sub" data-i="n3" style="margin-top:6px"></div>
+                        </section>
+                    </div>
+                </div>
+                <div class="g2">
+                    <section class="card">
+                        <h2 data-i="hc"></h2>
+                        <div class="row">
+                            <label for="sd" data-i="d"></label>
+                            <output id="od"></output>
+                            <input type="range" id="sd" min="5" max="200" step="1" value="20">
+                        </div>
+                        <div class="row">
+                            <label for="sr" data-i="r"></label>
+                            <output id="or"></output>
+                            <input type="range" id="sr" min="0" max="1000" step="1" value="746">
+                        </div>
+                        <div class="row">
+                            <label for="sl" data-i="l"></label>
+                            <output id="ol"></output>
+                            <input type="range" id="sl" min="0" max="100" step="1" value="20">
+                        </div>
+                        <div class="row">
+                            <label for="st" data-i="t"></label>
+                            <output id="ot"></output>
+                            <input type="range" id="st" min="0" max="300" step="1" value="40">
+                        </div>
+                        <div class="row">
+                            <label for="sn" data-i="n"></label>
+                            <output id="on"></output>
+                            <input type="range" id="sn" min="1000" max="100000" step="1000" value="10000">
+                        </div>
+                        <div class="btns">
+                            <button class="p" id="brun" data-i="run"></button>
+                            <button id="bstop" data-i="stop"></button>
+                            <button id="brst" data-i="rst"></button>
+                        </div>
+                    </section>
+                    <section class="card">
+                        <h2 data-i="hr"></h2>
+                        <dl>
+                            <dt data-i="ra"></dt>
+                            <dd id="ra"></dd>
+                            <dt data-i="rs"></dt>
+                            <dd id="rs"></dd>
+                            <dt data-i="rt"></dt>
+                            <dd id="rt"></dd>
+                            <dt data-i="rm"></dt>
+                            <dd id="rm"></dd>
+                            <dt data-i="re"></dt>
+                            <dd id="re"></dd>
+                            <dt data-i="rl"></dt>
+                            <dd id="rl"></dd>
+                            <dt data-i="rx"></dt>
+                            <dd id="rx"></dd>
+                        </dl>
+                    </section>
+                </div>
+                <section class="card">
+                    <h2 data-i="hw"></h2>
+                    <canvas id="cw" style="height:290px"></canvas>
+                    <div class="sub" data-i="wn"></div>
+                </section>
+                <section class="card">
+                    <h2 data-i="hs"></h2>
+                    <div class="sw">
+                        <div>
+                            <canvas id="s1"></canvas>
+                            <div class="sub" data-i="s1" style="text-align:center"></div>
+                        </div>
+                        <div>
+                            <canvas id="s2"></canvas>
+                            <div class="sub" data-i="s2" style="text-align:center"></div>
+                        </div>
+                        <div>
+                            <canvas id="s3"></canvas>
+                            <div class="sub" data-i="s3" style="text-align:center"></div>
+                        </div>
+                    </div>
+                </section>
+                <section class="card">
+                    <h2 data-i="hg"></h2>
+                    <div class="btns">
+                        <button id="bcsv" data-i="csv"></button>
+                        <button id="bclr" data-i="clr"></button>
+                    </div>
+                    <div class="tw">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th data-i="d2"></th>
+                                    <th data-i="r2"></th>
+                                    <th data-i="l2"></th>
+                                    <th data-i="a2"></th>
+                                    <th>BER</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lg"></tbody>
+                        </table>
+                    </div>
+                </section>
+                <section class="card">
+                    <h2 data-i="hu"></h2>
+                    <label class="t">
+                        <input type="checkbox" id="ulpf">
+                        <span data-i="u1"></span>
+                    </label>
+                    <label class="t">
+                        <input type="checkbox" id="uauto">
+                        <span data-i="u2"></span>
+                    </label>
+                    <div id="ur" style="font-weight:600"></div>
+                </section>
+                <section class="card">
+                    <h2 data-i="hm"></h2>
+                    <div data-i="m0"></div>
+                    <pre>P_rx = P_ref·(d_ref/d)²            [W]
+V_sig = R·P_rx·Rf  (≤ Vsat)       [V]   R: A/W
+V_off = R·P_amb·Rf                 [V]
+f3dB = 1/(2π·Rf·Cpd),  x = 2π·f_eff/bitrate
+y_k = V_off + V_sig·(1−e^−x)·Σ_j e^(−jx)·b_(k−j)   (ISI)
+σ² = Rf²·B·(4kT/Rf + 2q·I_bg + i_ex²),  B ≈ 1.57·f_eff
+BER = ½·[Q((H−Vth)/σ) + Q((Vth−L)/σ)]  → Q(√SNR), SNR=(A_eff/2σ)²
+Q(z) = ½·erfc(z/√2);  PRBS15: count TX≠RX bits</pre>
+                    <div class="sub" data-i="m1"></div>
+                </section>
+                <footer>
+                    <div data-i="foot"></div>
+                    <div>
+                        Trần Thị Phương Anh (202514639) · Nguyễn Trọng Nghĩa (202514719) · <span data-i="gv"></span>
+                        · 176181
+                    </div>
+                </footer>
+            </div>
+        </main>
+        <script src="./three.min.js"></script>
+        <script>
+            // ===== MODEL CONSTANTS (replace with measured values) =====
+            const K = {
+                R: 0.5,
+                // photodiode responsivity [A/W]
+                Rf: 1e5,
+                // TIA feedback resistor [ohm]
+                Cpd: 1e-11,
+                // photodiode+feedback capacitance [F]
+                Pref: 2e-6,
+                // LED optical power reaching photodiode at dRef [W]
+                dRef: 100,
+                // reference distance [cm]
+                Pamb: 2e-6,
+                // ambient optical power on photodiode at 100% light [W]
+                iEx: 40e-12,
+                // extra input noise density: op-amp/EMI [A/sqrt(Hz)]
+                Temp: 300,
+                // temperature [K]
+                Vsat: 3.0 // TIA output saturation [V]
+            };
+            // ===== 3D PART NAMES / VALUES (edit if components change) =====
+            const PARTS = {
+                esp: 'ESP32 DevKit',
+                amp: 'MCP6002',
+                cmp: 'LM393',
+                pd: 'BPW34',
+                npn: 'NPN TO-92',
+                led: 'LED 5 mm',
+                rb: 1e3,
+                rl: 220,
+                rf: 1e5,
+                rdiv: 1e3,
+                rpu: 1e4,
+                cf: '100 pF'
+            };
+            const kB = 1.38e-23
+              , q = 1.602e-19
+              , OS = 8
+              , W = 40;
+            const L = {
+                vi: {
+                    title: "Optical Communication Tester (OCT)",
+                    sub: "Mô phỏng tương tác liên kết quang LED → Photodiode",
+                    disc: "⚠ Đây là mô phỏng lý thuyết từ mô hình đơn giản, chưa phải số liệu đo từ mạch thật.",
+                    hd: "Sơ đồ khối (bấm vào khối để xem giải thích)",
+                    h3: "Mô hình 3D",
+                    v0: "Tổng quan",
+                    v1: "Phía phát",
+                    v2: "Phía thu",
+                    pa: "Tạm dừng",
+                    pr: "Tiếp tục",
+                    n3: "Mô hình 3D mang tính minh họa, không đúng tỉ lệ thật.",
+                    slow: "hiển thị chậm lại, tốc độ thật: ",
+                    ng: "Trình duyệt không hỗ trợ WebGL nên không hiển thị được mô hình 3D.",
+                    hc: "Bảng điều khiển",
+                    d: "Khoảng cách",
+                    r: "Tốc độ dữ liệu",
+                    l: "Ánh sáng môi trường",
+                    t: "Ngưỡng comparator",
+                    n: "Độ dài chuỗi test",
+                    run: "Chạy test",
+                    stop: "Dừng",
+                    rst: "Đặt lại",
+                    hr: "Kết quả trực tiếp",
+                    ra: "Biên độ thu",
+                    rs: "SNR",
+                    rt: "BER lý thuyết",
+                    rm: "BER đo mô phỏng",
+                    re: "Bit lỗi / tổng bit",
+                    rl: "Trạng thái liên kết",
+                    rx: "Tốc độ tin cậy tối đa (BER<10⁻³)",
+                    hw: "Dạng sóng (40 bit cuối)",
+                    wn: "Trên: bit phát · Giữa: sau op-amp (đường đứt = ngưỡng, chấm = offset nền) · Dưới: bit sau comparator. Đỏ = bit lỗi.",
+                    hs: "Quét tham số: BER lý thuyết (trục log)",
+                    s1: "BER theo khoảng cách",
+                    s2: "BER theo tốc độ",
+                    s3: "BER theo ánh sáng nền",
+                    hg: "Nhật ký đo",
+                    csv: "Xuất CSV",
+                    clr: "Xóa nhật ký",
+                    d2: "Khoảng cách (cm)",
+                    r2: "Tốc độ (bps)",
+                    l2: "Ánh sáng (%)",
+                    a2: "Biên độ (mV)",
+                    hu: "Nâng cấp",
+                    u1: "Bộ lọc thông thấp (fc ≈ 0,7 × tốc độ bit)",
+                    u2: "Tối ưu ngưỡng tự động (ngưỡng = offset + biên độ/2)",
+                    hm: "Mô hình",
+                    m0: "Mô hình đơn giản, nhất quán; mọi SNR/BER đều tính từ các công thức sau:",
+                    m1: "Hằng số mô hình đặt ở đầu script để thay bằng số đo thực.",
+                    foot: "Đồ án Electronic Devices – ĐH Bách khoa Hà Nội",
+                    gv: "GVHD: ThS. Hoàng Quang Huy",
+                    g: ["Tốt", "Chấp nhận được", "Mất liên kết"],
+                    bu: "Chưa nâng cấp",
+                    ba: "Hiện tại",
+                    nf: "Không đạt",
+                    fr: "bit/s",
+                    csvmsg: "Sao chép CSV bên dưới nếu trình duyệt chặn tải xuống:",
+                    b: [["ESP32 (phát)", "Tạo chuỗi bit test PRBS và xuất ra chân GPIO theo tốc độ đặt.", "ESP32 DevKit, timer/RMT"], ["Driver LED", "Đổi mức logic thành dòng lớn để bật/tắt LED nhanh.", "MOSFET 2N7002 + điện trở hạn dòng"], ["LED", "Phát ánh sáng mang dữ liệu.", "LED hồng ngoại 850/940 nm hoặc LED đỏ"], ["Photodiode", "Đổi ánh sáng thu thành dòng điện nhỏ.", "BPW34, SFH206K"], ["Op-amp (TIA)", "Đổi dòng thành áp; Rf quyết định độ lợi, Rf·Cpd quyết định băng thông.", "OPA354, MCP6022, Rf≈100 kΩ"], ["Comparator", "So tín hiệu analog với ngưỡng để ra mức số.", "LM393, TLV3501; ngưỡng bằng biến trở"], ["ESP32 (thu)", "Đọc mức số, so với chuỗi gốc, đếm lỗi, tính BER, ghi log.", "ESP32 + Serial/SD/màn hình"]],
+                    fn: "Chức năng",
+                    pt: "Linh kiện gợi ý",
+                    ln: ["Bit phát", "Sau op-amp", "Sau comparator"]
+                },
+                en: {
+                    title: "Optical Communication Tester (OCT)",
+                    sub: "Interactive simulation of an LED → Photodiode optical link",
+                    disc: "⚠ This is a theoretical simulation from a simplified model, not measured data from a real circuit.",
+                    hd: "Block diagram (click a block for details)",
+                    h3: "3D model",
+                    v0: "Overview",
+                    v1: "Transmitter",
+                    v2: "Receiver",
+                    pa: "Pause",
+                    pr: "Resume",
+                    n3: "The 3D model is illustrative and not to real scale.",
+                    slow: "display slowed down, real rate: ",
+                    ng: "WebGL is not available, so the 3D model cannot be shown.",
+                    hc: "Control panel",
+                    d: "Distance",
+                    r: "Data rate",
+                    l: "Ambient light",
+                    t: "Comparator threshold",
+                    n: "Test sequence length",
+                    run: "Run test",
+                    stop: "Stop",
+                    rst: "Reset",
+                    hr: "Live results",
+                    ra: "Received amplitude",
+                    rs: "SNR",
+                    rt: "Theoretical BER",
+                    rm: "Simulated BER",
+                    re: "Error bits / total",
+                    rl: "Link status",
+                    rx: "Max reliable rate (BER<10⁻³)",
+                    hw: "Waveforms (last 40 bits)",
+                    wn: "Top: TX bits · Middle: after op-amp (dashed = threshold, dotted = ambient offset) · Bottom: after comparator. Red = bit error.",
+                    hs: "Parameter sweeps: theoretical BER (log axis)",
+                    s1: "BER vs distance",
+                    s2: "BER vs data rate",
+                    s3: "BER vs ambient light",
+                    hg: "Measurement log",
+                    csv: "Export CSV",
+                    clr: "Clear log",
+                    d2: "Distance (cm)",
+                    r2: "Rate (bps)",
+                    l2: "Light (%)",
+                    a2: "Amplitude (mV)",
+                    hu: "Upgrades",
+                    u1: "Low-pass filter (fc ≈ 0.7 × bit rate)",
+                    u2: "Auto threshold optimization (threshold = offset + amplitude/2)",
+                    hm: "Model",
+                    m0: "A simple, consistent model; all SNR/BER values come from these formulas:",
+                    m1: "Model constants are defined at the top of the script; replace them with measured values.",
+                    foot: "Electronic Devices project – Hanoi University of Science and Technology",
+                    gv: "Instructor: MSc. Hoàng Quang Huy",
+                    g: ["Good", "Acceptable", "Link lost"],
+                    bu: "Without upgrades",
+                    ba: "Current",
+                    nf: "None",
+                    fr: "bps",
+                    csvmsg: "Copy the CSV below if downloads are blocked:",
+                    b: [["ESP32 (TX)", "Generates the PRBS test bits and drives a GPIO at the set rate.", "ESP32 DevKit, timer/RMT"], ["LED driver", "Turns logic levels into a larger current to switch the LED fast.", "MOSFET 2N7002 + current-limit resistor"], ["LED", "Emits the light that carries the data.", "850/940 nm IR LED or red LED"], ["Photodiode", "Converts received light into a small current.", "BPW34, SFH206K"], ["Op-amp (TIA)", "Converts current to voltage; Rf sets gain, Rf·Cpd sets bandwidth.", "OPA354, MCP6022, Rf≈100 kΩ"], ["Comparator", "Compares the analog signal with a threshold to give digital levels.", "LM393, TLV3501; threshold via trimmer"], ["ESP32 (RX)", "Reads digital levels, compares with the original, counts errors, computes BER, logs.", "ESP32 + Serial/SD/display"]],
+                    fn: "Function",
+                    pt: "Suggested parts",
+                    ln: ["TX bits", "After op-amp", "After comparator"]
+                }
+            };
+            const $ = id => document.getElementById(id)
+              , qa = s => document.querySelectorAll(s);
+            let S3 = null
+              , lang = 'vi'
+              , S = {
+                d: 20,
+                rv: 746,
+                light: 20,
+                thr: 40,
+                n: 10000,
+                lpf: false,
+                auto: false
+            }
+              , run = null
+              , R = {
+                e: 0,
+                t: 0,
+                w: null
+            }
+              , LOG = []
+              , sel = 0;
+            const rateOf = v => +Math.pow(10, 2 + v / 250).toPrecision(2);
+            const P = () => ({
+                d: S.d,
+                rate: rateOf(S.rv),
+                light: S.light,
+                thr: S.thr,
+                lpf: S.lpf,
+                auto: S.auto
+            });
+            const fr = r => r >= 1e6 ? r / 1e6 + " Mbps" : r.toLocaleString('de-DE') + " bps";
+            const fb = b => b < 1e-12 ? "<1e-12" : b.toExponential(1);
+            function erfc(x) {
+                const z = Math.abs(x)
+                  , t = 1 / (1 + .5 * z)
+                  , r = t * Math.exp(-z * z - 1.26551223 + t * (1.00002368 + t * (.37409196 + t * (.09678418 + t * (-.18628806 + t * (.27886807 + t * (-1.13520398 + t * (1.48851587 + t * (-.82215223 + t * .17087277)))))))));
+                return x >= 0 ? r : 2 - r
+            }
+            const Q = z => .5 * erfc(z / Math.SQRT2);
+            const gs = () => Math.sqrt(-2 * Math.log(1 - Math.random())) * Math.cos(6.2831853 * Math.random());
+            function model(p) {
+                const Prx = K.Pref * Math.pow(K.dRef / p.d, 2)
+                  , off = K.R * K.Pamb * p.light / 100 * K.Rf
+                  , Ib = K.R * K.Pamb * p.light / 100;
+                const A = Math.min(K.R * Prx * K.Rf, K.Vsat - off)
+                  , f3 = 1 / (2 * Math.PI * K.Rf * K.Cpd);
+                const fe = p.lpf ? 1 / Math.sqrt(1 / (f3 * f3) + 1 / Math.pow(.7 * p.rate, 2)) : f3;
+                const x = 2 * Math.PI * fe / p.rate
+                  , e = Math.exp(-x)
+                  , B = 1.57 * fe;
+                const sg = K.Rf * Math.sqrt((4 * kB * K.Temp / K.Rf + 2 * q * Ib + K.iEx * K.iEx) * B);
+                const Th = p.auto ? off + A / 2 : p.thr / 1000;
+                let s = 0;
+                for (let m = 0; m < 64; m++) {
+                    let c = 0;
+                    for (let j = 0; j < 6; j++)
+                        if (m >> j & 1)
+                            c += Math.pow(e, j);
+                    c = (1 - e) * c + .5 * Math.pow(e, 6);
+                    const y = off + A * c;
+                    s += Q(((m & 1) ? y - Th : Th - y) / sg)
+                }
+                const Ae = A * (1 - e);
+                return {
+                    Prx,
+                    A,
+                    off,
+                    Th,
+                    x,
+                    e,
+                    sg,
+                    th: s / 64,
+                    Ae,
+                    snr: 20 * Math.log10(Math.max(Ae, 1e-9) / (2 * sg))
+                }
+            }
+            function sim(p, n, st, win) {
+                const m = model(p)
+                  , a = 1 - Math.exp(-m.x / OS);
+                let e = 0
+                  , y = st.y;
+                const w = {
+                    tx: [],
+                    v: [],
+                    rx: [],
+                    er: []
+                };
+                for (let i = 0; i < n; i++) {
+                    const b = ((st.l >> 14) ^ (st.l >> 13)) & 1;
+                    st.l = ((st.l << 1) | b) & 32767;
+                    if (!st.l)
+                        st.l = 1;
+                    const tg = m.off + (b ? m.A : 0)
+                      , inw = win && i >= n - W;
+                    let v = 0;
+                    for (let s = 0; s < OS; s++) {
+                        y += a * (tg - y);
+                        if (inw) {
+                            v = y + gs() * m.sg;
+                            w.v.push(v)
+                        }
+                    }
+                    if (!inw)
+                        v = y + gs() * m.sg;
+                    const r = v > m.Th ? 1 : 0
+                      , er = r !== b;
+                    if (er)
+                        e++;
+                    if (inw) {
+                        w.tx.push(b);
+                        w.rx.push(r);
+                        w.er.push(er)
+                    }
+                }
+                st.y = y;
+                return {
+                    e,
+                    w
+                }
+            }
+            const col = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+            function cv(c) {
+                const d = devicePixelRatio || 1
+                  , w = c.clientWidth
+                  , h = c.clientHeight;
+                if (c.width !== Math.round(w * d) || c.height !== Math.round(h * d)) {
+                    c.width = Math.round(w * d);
+                    c.height = Math.round(h * d)
+                }
+                const g = c.getContext('2d');
+                g.setTransform(d, 0, 0, d, 0, 0);
+                g.clearRect(0, 0, w, h);
+                g.font = "11px system-ui,sans-serif";
+                return [g, w, h]
+            }
+            function drawWave(m) {
+                const [g,w,h] = cv($('cw'));
+                const wv = R.w;
+                if (!wv || !wv.tx.length)
+                    return;
+                const nb = wv.tx.length
+                  , l = 8
+                  , bw = (w - l - 8) / nb
+                  , lh = h / 3
+                  , fg = col('--fg')
+                  , mu = col('--mut')
+                  , bad = col('--bad');
+                const dig = (arr, y0, c) => {
+                    g.strokeStyle = c;
+                    g.lineWidth = 1.6;
+                    g.beginPath();
+                    arr.forEach( (b, i) => {
+                        const y = y0 + (b ? lh * .25 : lh * .8)
+                          , x = l + i * bw;
+                        i ? g.lineTo(x, y) : g.moveTo(x, y);
+                        g.lineTo(x + bw, y)
+                    }
+                    );
+                    g.stroke()
+                }
+                ;
+                for (let i = 0; i < nb; i++)
+                    if (wv.er[i]) {
+                        g.fillStyle = bad + "";
+                        g.globalAlpha = .25;
+                        g.fillRect(l + i * bw, 0, bw, h);
+                        g.globalAlpha = 1
+                    }
+                dig(wv.tx, 0, col('--ac'));
+                const vm = Math.max(m.Th, ...wv.v, m.off + .001) * 1.15
+                  , Y = v => lh + lh * .92 - (v / vm) * lh * .85;
+                g.strokeStyle = col('--c2');
+                g.lineWidth = 1.4;
+                g.beginPath();
+                wv.v.forEach( (v, i) => {
+                    const x = l + i * bw / OS
+                      , y = Y(v);
+                    i ? g.lineTo(x, y) : g.moveTo(x, y)
+                }
+                );
+                g.stroke();
+                g.strokeStyle = col('--wa');
+                g.setLineDash([6, 4]);
+                g.beginPath();
+                g.moveTo(l, Y(m.Th));
+                g.lineTo(w, Y(m.Th));
+                g.stroke();
+                g.strokeStyle = mu;
+                g.setLineDash([2, 3]);
+                g.beginPath();
+                g.moveTo(l, Y(m.off));
+                g.lineTo(w, Y(m.off));
+                g.stroke();
+                g.setLineDash([]);
+                g.fillStyle = col('--wa');
+                g.fillText("Vth " + (m.Th * 1e3).toFixed(0) + " mV", w - 90, Y(m.Th) - 3);
+                dig(wv.rx.map(b => b), 2 * lh, fg);
+                g.strokeStyle = bad;
+                g.lineWidth = 2.4;
+                wv.er.forEach( (e, i) => {
+                    if (e) {
+                        const y = 2 * lh + (wv.rx[i] ? lh * .25 : lh * .8);
+                        g.beginPath();
+                        g.moveTo(l + i * bw, y);
+                        g.lineTo(l + (i + 1) * bw, y);
+                        g.stroke()
+                    }
+                }
+                );
+                g.fillStyle = mu;
+                L[lang].ln.forEach( (t, i) => g.fillText(t, l + 2, i * lh + 11));
+                g.strokeStyle = col('--bd');
+                g.lineWidth = 1;
+                [lh, 2 * lh].forEach(y => {
+                    g.beginPath();
+                    g.moveTo(0, y);
+                    g.lineTo(w, y);
+                    g.stroke()
+                }
+                )
+            }
+            function sw(id, fn, tc, lab) {
+                const [g,w,h] = cv($(id))
+                  , Lm = 30
+                  , T = 6
+                  , B = 14
+                  , N = 40
+                  , mu = col('--mut');
+                g.fillStyle = mu;
+                g.textAlign = 'center';
+                g.fillText(lab, (w + Lm) / 2, h - 2);
+                g.textAlign = 'left';
+                const X = t => Lm + (w - Lm - 6) * t
+                  , Y = b => T + (h - T - B) * (-Math.log10(Math.min(1, Math.max(b, 1e-9))) / 9);
+                g.fillStyle = mu;
+                g.strokeStyle = col('--bd');
+                [0, -3, -6, -9].forEach(v => {
+                    const y = T + (h - T - B) * (-v / 9);
+                    g.beginPath();
+                    g.moveTo(Lm, y);
+                    g.lineTo(w, y);
+                    g.stroke();
+                    g.fillText("1e" + v, 0, y + 4)
+                }
+                );
+                g.strokeStyle = col('--wa');
+                g.setLineDash([4, 3]);
+                g.beginPath();
+                g.moveTo(Lm, Y(1e-3));
+                g.lineTo(w, Y(1e-3));
+                g.stroke();
+                g.setLineDash([]);
+                g.strokeStyle = col('--ac');
+                g.lineWidth = 2;
+                g.beginPath();
+                let cb = 0;
+                for (let i = 0; i <= N; i++) {
+                    const t = i / N
+                      , b = fn(t);
+                    i ? g.lineTo(X(t), Y(b)) : g.moveTo(X(t), Y(b))
+                }
+                g.stroke();
+                cb = fn(tc);
+                g.fillStyle = col('--bad');
+                g.beginPath();
+                g.arc(X(tc), Y(cb), 5, 0, 7);
+                g.fill()
+            }
+            function maxRate(p) {
+                for (let v = 1000; v >= 0; v -= 10) {
+                    if (model({
+                        ...p,
+                        rate: rateOf(v)
+                    }).th < 1e-3)
+                        return rateOf(v)
+                }
+                return 0
+            }
+            function render() {
+                const p = P()
+                  , m = model(p)
+                  , T = L[lang]
+                  , tot = R.t
+                  , ber = tot ? R.e / tot : m.th;
+                $('od').textContent = p.d + " cm";
+                $('or').textContent = fr(p.rate);
+                $('ol').textContent = p.light + "%";
+                $('ot').textContent = p.auto ? (m.Th * 1e3).toFixed(0) + " mV (auto)" : p.thr + " mV";
+                $('on').textContent = S.n.toLocaleString();
+                $('ra').textContent = (m.Ae * 1e3).toFixed(1) + " mV";
+                $('rs').textContent = m.snr.toFixed(1) + " dB";
+                $('rt').textContent = fb(m.th);
+                $('rm').textContent = tot ? (R.e ? fb(R.e / tot) : "0 (<" + (1 / tot).toExponential(0) + ")") : "—";
+                $('re').textContent = R.e + " / " + tot.toLocaleString();
+                const k = ber < 1e-3 ? 0 : ber < 1e-2 ? 1 : 2
+                  , sl = $('rl');
+                sl.textContent = T.g[k];
+                sl.style.color = col(['--ok', '--wa', '--bad'][k]);
+                const mr = maxRate(p);
+                S3 = {
+                    p,
+                    m,
+                    k,
+                    ber
+                };
+                $('rx').textContent = mr ? fr(mr) : T.nf;
+                drawWave(m);
+                sw('s1', t => model({
+                    ...p,
+                    d: 5 + 195 * t
+                }).th, (p.d - 5) / 195, 'd (cm): 5 → 200');
+                sw('s2', t => model({
+                    ...p,
+                    rate: rateOf(1000 * t)
+                }).th, S.rv / 1000, 'f (bps): 100 → 1M');
+                sw('s3', t => model({
+                    ...p,
+                    light: 100 * t
+                }).th, p.light / 100, 'light (%): 0 → 100');
+                const b0 = model({
+                    ...p,
+                    lpf: false,
+                    auto: false
+                }).th;
+                $('ur').textContent = T.bu + ": " + fb(b0) + "  →  " + T.ba + ": " + fb(m.th) + (b0 > m.th && m.th > 1e-12 ? "  (÷" + (b0 / m.th).toFixed(1) + ")" : "")
+            }
+            function upd() {
+                if (!run) {
+                    const p = P()
+                      , n = Math.min(S.n, 20000)
+                      , r = sim(p, n, {
+                        l: 0x1ace,
+                        y: model(p).off
+                    }, true);
+                    R = {
+                        e: r.e,
+                        t: n,
+                        w: r.w
+                    }
+                }
+                render()
+            }
+            function step() {
+                if (!run)
+                    return;
+                const p = P()
+                  , c = Math.min(run.c, S.n - run.t)
+                  , r = sim(p, c, run.st, true);
+                run.e += r.e;
+                run.t += c;
+                R = {
+                    e: run.e,
+                    t: run.t,
+                    w: r.w
+                };
+                render();
+                if (run.t >= S.n) {
+                    const m = model(p);
+                    LOG.push({
+                        d: p.d,
+                        r: p.rate,
+                        l: p.light,
+                        a: m.Ae * 1e3,
+                        b: run.e / run.t
+                    });
+                    run = null;
+                    logR()
+                } else
+                    requestAnimationFrame(step)
+            }
+            function logR() {
+                $('lg').innerHTML = LOG.map( (x, i) => `<tr><td>${i + 1}</td><td>${x.d}</td><td>${x.r}</td><td>${x.l}</td><td>${x.a.toFixed(1)}</td><td>${x.b.toExponential(2)}</td></tr>`).join('')
+            }
+            function info() {
+                const T = L[lang]
+                  , b = T.b[sel];
+                $('info').innerHTML = `<b>${sel + 1}. ${b[0]}</b> — <b>${T.fn}:</b> ${b[1]} <b>${T.pt}:</b> ${b[2]}`;
+                $('blocks').innerHTML = T.b.map( (x, i) => `<button data-k="${i}" class="${i == sel ? 'sel' : ''}">${i + 1}. ${x[0]}</button>`).join('');
+                qa('#blocks button').forEach(e => e.onclick = () => {
+                    sel = +e.dataset.k;
+                    info();
+                    if (window.fly3)
+                        fly3(sel)
+                }
+                )
+            }
+            function lang_() {
+                const T = L[lang];
+                document.documentElement.lang = lang;
+                $('bl').textContent = lang == 'vi' ? 'EN' : 'VI';
+                qa('[data-i]').forEach(e => {
+                    const v = T[e.dataset.i];
+                    if (typeof v == 'string')
+                        e.textContent = v
+                }
+                );
+                info();
+                render()
+            }
+            // diagram particles
+            let pts = [];
+            function diag() {
+                const [g,w,h] = cv($('cd'))
+                  , p = P()
+                  , m = model(p)
+                  , uw = m.Prx * 1e6
+                  , fr_ = Math.min(1, Math.max(0, Math.log10(uw / .2) / Math.log10(4000)));
+                const x0 = 50
+                  , x1 = w - 50
+                  , y = h / 2
+                  , n = Math.round(4 + 36 * fr_);
+                while (pts.length < n)
+                    pts.push({
+                        t: Math.random(),
+                        o: Math.random() * 2 - 1
+                    });
+                pts.length = n;
+                g.strokeStyle = col('--bd');
+                g.setLineDash([4, 4]);
+                g.beginPath();
+                g.moveTo(x0, y);
+                g.lineTo(x1, y);
+                g.stroke();
+                g.setLineDash([]);
+                g.fillStyle = col('--wa');
+                g.beginPath();
+                g.arc(x0, y, 10, 0, 7);
+                g.fill();
+                g.fillStyle = col('--c2');
+                g.fillRect(x1 - 8, y - 14, 16, 28);
+                g.fillStyle = col('--mut');
+                g.fillText("LED", x0 - 10, y + 28);
+                g.fillText("PD", x1 - 8, y + 28);
+                g.fillText(p.d + " cm · " + uw.toFixed(1) + " µW", (x0 + x1) / 2 - 45, 14);
+                pts.forEach(q => {
+                    q.t += .006 + .004 * (1 - fr_);
+                    if (q.t > 1) {
+                        q.t = 0;
+                        q.o = Math.random() * 2 - 1
+                    }
+                    g.globalAlpha = .2 + .8 * fr_;
+                    g.fillStyle = col('--wa');
+                    g.beginPath();
+                    g.arc(x0 + (x1 - x0) * q.t, y + q.o * q.t * 30, 2.5, 0, 7);
+                    g.fill()
+                }
+                );
+                g.globalAlpha = 1;
+                requestAnimationFrame(diag)
+            }
+            // events
+            const bind = (id, k, f) => $(id).oninput = e => {
+                S[k] = f(e.target.value);
+                run = null;
+                upd()
+            }
+            ;
+            bind('sd', 'd', Number);
+            bind('sr', 'rv', Number);
+            bind('sl', 'light', Number);
+            bind('st', 'thr', Number);
+            bind('sn', 'n', Number);
+            $('ulpf').onchange = e => {
+                S.lpf = e.target.checked;
+                run = null;
+                upd()
+            }
+            ;
+            $('uauto').onchange = e => {
+                S.auto = e.target.checked;
+                $('st').disabled = S.auto;
+                run = null;
+                upd()
+            }
+            ;
+            $('brun').onclick = () => {
+                if (run)
+                    return;
+                run = {
+                    st: {
+                        l: 0x1ace,
+                        y: model(P()).off
+                    },
+                    e: 0,
+                    t: 0,
+                    c: Math.max(100, Math.ceil(S.n / 60))
+                };
+                R = {
+                    e: 0,
+                    t: 0,
+                    w: null
+                };
+                requestAnimationFrame(step)
+            }
+            ;
+            $('bstop').onclick = () => {
+                run = null
+            }
+            ;
+            $('brst').onclick = () => {
+                run = null;
+                S = {
+                    d: 20,
+                    rv: 746,
+                    light: 20,
+                    thr: 40,
+                    n: 10000,
+                    lpf: false,
+                    auto: false
+                };
+                [['sd', 20], ['sr', 746], ['sl', 20], ['st', 40], ['sn', 10000]].forEach( ([i,v]) => $(i).value = v);
+                $('ulpf').checked = $('uauto').checked = false;
+                $('st').disabled = false;
+                upd()
+            }
+            ;
+            $('bclr').onclick = () => {
+                LOG = [];
+                logR()
+            }
+            ;
+            $('bcsv').onclick = () => {
+                const t = "n,distance_cm,rate_bps,light_pct,amplitude_mV,BER\n" + LOG.map( (x, i) => [i + 1, x.d, x.r, x.l, x.a.toFixed(2), x.b.toExponential(3)].join(',')).join("\n");
+                try {
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(new Blob([t],{
+                        type: 'text/csv'
+                    }));
+                    a.download = 'oct_log.csv';
+                    a.click()
+                } catch (e) {}
+            }
+            ;
+            $('bl').onclick = () => {
+                lang = lang == 'vi' ? 'en' : 'vi';
+                lang_()
+            }
+            ;
+            $('bt').onclick = () => {
+                const r = document.documentElement
+                  , dk = r.dataset.theme ? r.dataset.theme == 'dark' : matchMedia('(prefers-color-scheme:dark)').matches;
+                r.dataset.theme = dk ? 'light' : 'dark';
+                render()
+            }
+            ;
+            addEventListener('resize', render);
+            function nogl() {
+                $('f3').style.display = 'none';
+                $('ng').style.display = 'block';
+                qa('#v0,#v1,#v2,#bp').forEach(b => b.style.display = 'none')
+            }
+            function init3d() {
+                if (typeof THREE === 'undefined')
+                    return nogl();
+                let rd;
+                try {
+                    rd = new THREE.WebGLRenderer({
+                        canvas: $('c3'),
+                        antialias: true
+                    });
+                    if (!rd.getContext())
+                        throw 0
+                } catch (e) {
+                    return nogl()
+                }
+                const rm = matchMedia('(prefers-reduced-motion: reduce)').matches
+                  , fr3 = $('f3')
+                  , cn = $('c3');
+                rd.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+                const sc = new THREE.Scene()
+                  , cam = new THREE.PerspectiveCamera(40,16 / 9,.1,100)
+                  , V = (x, y, z) => new THREE.Vector3(x,y,z);
+                sc.background = new THREE.Color();
+                const M = (c, o) => new THREE.MeshStandardMaterial(Object.assign({
+                    color: c,
+                    roughness: .6,
+                    metalness: .1
+                }, o || {}));
+                const bx = (w, h, d, m, x, y, z, p) => {
+                    const o = new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
+                    o.position.set(x, y, z);
+                    (p || sc).add(o);
+                    return o
+                }
+                ;
+                const cy = (r, h, m, x, y, z, p, rz) => {
+                    const o = new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,16),m);
+                    o.position.set(x, y, z);
+                    if (rz)
+                        o.rotation.z = rz;
+                    (p || sc).add(o);
+                    return o
+                }
+                ;
+                const gp = (x, y, z, p) => {
+                    const g = new THREE.Group();
+                    g.position.set(x, y, z);
+                    p.add(g);
+                    return g
+                }
+                ;
+                const wire = (p, a, b) => {
+                    const d = b.clone().sub(a)
+                      , l = d.length()
+                      , o = new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,l,6),M(0xe0b040, {
+                        metalness: .4
+                    }));
+                    o.position.copy(a).addScaledVector(d, .5);
+                    o.quaternion.setFromUnitVectors(V(0, 1, 0), d.normalize());
+                    p.add(o)
+                }
+                ;
+                const gt = ( () => {
+                    const c = document.createElement('canvas');
+                    c.width = c.height = 64;
+                    const g = c.getContext('2d')
+                      , r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+                    r.addColorStop(0, 'rgba(255,255,255,1)');
+                    r.addColorStop(1, 'rgba(255,255,255,0)');
+                    g.fillStyle = r;
+                    g.fillRect(0, 0, 64, 64);
+                    return new THREE.CanvasTexture(c)
+                }
+                )();
+                const spr = (c, s) => {
+                    const o = new THREE.Sprite(new THREE.SpriteMaterial({
+                        map: gt,
+                        color: c,
+                        transparent: true,
+                        blending: THREE.AdditiveBlending,
+                        depthWrite: false
+                    }));
+                    o.scale.set(s, s, 1);
+                    sc.add(o);
+                    return o
+                }
+                ;
+                const LEDX = -4.3
+                  , pdOf = d => LEDX + .6 + (d - 5) / 195 * 7.4
+                  , blk = 0x111418
+                  , pcb = 0x0f7a3a;
+                // table, rail, ruler
+                bx(16, .3, 6, M(0x5b4636), 0, -.15, 0);
+                bx(14, .12, 2.2, M(0x8a8f98, {
+                    metalness: .6
+                }), -.2, .06, 0);
+                const rc = document.createElement('canvas');
+                rc.width = 1024;
+                rc.height = 64;
+                {
+                    const g = rc.getContext('2d');
+                    g.fillStyle = '#e8dcb0';
+                    g.fillRect(0, 0, 1024, 64);
+                    g.fillStyle = g.strokeStyle = '#222';
+                    g.font = 'bold 20px sans-serif';
+                    g.textAlign = 'center';
+                    for (let d = 5; d <= 200; d += 5) {
+                        const x = (d - 5) / 195 * 1022 + 1
+                          , big = d % 25 == 0 || d == 5;
+                        g.beginPath();
+                        g.moveTo(x, 0);
+                        g.lineTo(x, big ? 28 : 14);
+                        g.stroke();
+                        if (big && d != 200 && d != 5 || d == 5 || d == 200)
+                            g.fillText(d, Math.min(1004, Math.max(18, x)), 52)
+                    }
+                }
+                const rt = new THREE.CanvasTexture(rc)
+                  , rmat = M(0xe8dcb0);
+                bx(7.4, .04, .34, [rmat, rmat, new THREE.MeshBasicMaterial({
+                    map: rt
+                }), rmat, rmat, rmat], LEDX + .6 + 3.7, .02, 1.45);
+                const mark = bx(.07, .25, .07, M(0xd93025), 0, .15, 1.45);
+                // TX
+                const tx = gp(LEDX - 1.1, .12, 0, sc);
+                bx(2.8, .06, 1.8, M(0x30343a), 0, .03, 0, tx);
+                const g1 = gp(-.8, .06, .1, tx);
+                bx(1, .04, 1.1, M(pcb), 0, .02, 0, g1);
+                bx(.4, .05, .4, M(0xb0b4ba, {
+                    metalness: .8
+                }), -.05, .065, .15, g1);
+                bx(.2, .03, .2, M(blk), .25, .055, -.1, g1);
+                bx(.45, .012, .18, M(0xd8c060), 0, .045, -.45, g1);
+                const g2 = gp(.35, .06, -.45, tx);
+                bx(.7, .04, .6, M(0x1b4fa8), 0, .02, 0, g2);
+                bx(.16, .07, .12, M(blk), -.15, .07, 0, g2);
+                cy(.03, .14, M(0xd9b38c), .15, .06, 0, g2, Math.PI / 2);
+                const g3 = gp(1.1, .06, 0, tx)
+                  , ledMat = M(0xff8a00, {
+                    transparent: true,
+                    opacity: .9,
+                    emissive: 0xffaa22,
+                    emissiveIntensity: .1
+                });
+                bx(.2, .1, .2, M(0x222222), 0, .05, 0, g3);
+                cy(.12, .3, ledMat, 0, .27, 0, g3, Math.PI / 2);
+                {
+                    const s = new THREE.Mesh(new THREE.SphereGeometry(.12,16,12),ledMat);
+                    s.position.set(.15, .27, 0);
+                    g3.add(s)
+                }
+                cy(.012, .22, M(0xcccccc), 0, .12, .05, g3);
+                cy(.012, .22, M(0xcccccc), 0, .12, -.05, g3);
+                wire(tx, V(-.5, .1, -.1), V(0, .1, -.45));
+                wire(tx, V(.7, .1, -.45), V(1.1, .1, -.05));
+                // RX
+                const rx = gp(0, .12, 0, sc)
+                  , rxM = M(0x30343a, {
+                    emissive: 0x000000
+                });
+                bx(2.8, .06, 1.8, rxM, 0, .03, 0, rx);
+                const g4 = gp(-1.2, .06, 0, rx)
+                  , pdMat = M(0x88ccff, {
+                    emissive: 0x33ddff,
+                    emissiveIntensity: 0
+                });
+                bx(.2, .1, .2, M(0x222222), 0, .05, 0, g4);
+                bx(.1, .26, .26, M(0x1c2a55), 0, .27, 0, g4);
+                cy(.1, .02, pdMat, -.06, .27, 0, g4, Math.PI / 2);
+                cy(.012, .22, M(0xcccccc), 0, .12, .05, g4);
+                cy(.012, .22, M(0xcccccc), 0, .12, -.05, g4);
+                const g5 = gp(-.6, .06, -.55, rx)
+                  , g6 = gp(-.05, .06, -.55, rx);
+                [g5, g6].forEach(g => {
+                    bx(.5, .03, .4, M(pcb), 0, .015, 0, g);
+                    bx(.34, .07, .2, M(blk), 0, .07, 0, g)
+                }
+                );
+                const g7 = gp(.7, .06, 0, rx);
+                bx(1, .04, 1.1, M(pcb), 0, .02, 0, g7);
+                bx(.4, .05, .4, M(0xb0b4ba, {
+                    metalness: .8
+                }), -.05, .065, .15, g7);
+                bx(.2, .03, .2, M(blk), .25, .055, -.1, g7);
+                bx(.45, .012, .18, M(0xd8c060), 0, .045, -.45, g7);
+                const stM = M(0x22cc55, {
+                    emissive: 0x22cc55,
+                    emissiveIntensity: 1.2
+                })
+                  , st = new THREE.Mesh(new THREE.SphereGeometry(.09,16,12),stM);
+                st.position.set(-.3, .15, .6);
+                rx.add(st);
+                wire(rx, V(-1.2, .12, -.1), V(-.75, .12, -.55));
+                wire(rx, V(-.45, .12, -.55), V(-.2, .12, -.55));
+                wire(rx, V(.1, .12, -.55), V(.4, .12, -.2));
+                const tg = [g1, g2, g3, g4, g5, g6, g7]
+                  , off = [.9, .9, .7, .7, .85, .85, .9];
+                // lights
+                const amb = new THREE.AmbientLight(0xffffff,.2)
+                  , pl = new THREE.PointLight(0xfff4e0,.5,40);
+                pl.position.set(0, 3.6, 1.5);
+                const sp = new THREE.SpotLight(0xfff0d0,0,30,.7,.6);
+                sp.position.set(2, 3, -2.5);
+                sc.add(amb, pl, sp, sp.target);
+                const bulbM = M(0xffffff, {
+                    emissive: 0xfff0c0,
+                    emissiveIntensity: .1
+                });
+                cy(.5, .08, M(0x888888), 0, 4, 0, sc);
+                {
+                    const b = new THREE.Mesh(new THREE.SphereGeometry(.22,16,12),bulbM);
+                    b.position.set(0, 3.8, 0);
+                    sc.add(b)
+                }
+                cy(.04, 2.6, M(0x555555), 2.4, 1.3, -2.8, sc);
+                {
+                    const c = new THREE.Mesh(new THREE.ConeGeometry(.35,.5,16),M(0x2a6f9e));
+                    c.position.set(2, 3, -2.5);
+                    c.rotation.z = .5;
+                    sc.add(c)
+                }
+                const halo = spr(0xfff0b0, 1)
+                  , ledG = spr(0xffaa33, .7);
+                ledG.position.set(LEDX + .15, .45, 0);
+                // beam + particles
+                const beam = new THREE.Mesh(new THREE.CylinderGeometry(1,.1,1,24,1,true),new THREE.MeshBasicMaterial({
+                    color: 0xffd24a,
+                    transparent: true,
+                    opacity: .1,
+                    depthWrite: false,
+                    blending: THREE.AdditiveBlending,
+                    side: THREE.DoubleSide
+                }));
+                beam.rotation.z = -Math.PI / 2;
+                beam.position.y = .45;
+                sc.add(beam);
+                const N = 40
+                  , pg = new THREE.BufferGeometry()
+                  , pa = new Float32Array(N * 3)
+                  , pt_ = []
+                  , an = []
+                  , rr = [];
+                for (let i = 0; i < N; i++) {
+                    pt_.push(Math.random());
+                    an.push(Math.random() * 6.28);
+                    rr.push(Math.sqrt(Math.random()))
+                }
+                pg.setAttribute('position', new THREE.BufferAttribute(pa,3));
+                const pm = new THREE.PointsMaterial({
+                    size: .09,
+                    color: 0xffe680,
+                    transparent: true,
+                    opacity: .9,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                })
+                  , pts = new THREE.Points(pg,pm);
+                pts.frustumCulled = false;
+                sc.add(pts);
+                const bh = new THREE.BoxHelper(g1,0xffee55);
+                bh.visible = false;
+                sc.add(bh);
+                // labels
+                const lbs = [];
+                for (let i = 0; i < 8; i++) {
+                    const d = document.createElement('div');
+                    d.className = 'lb';
+                    $('lb').appendChild(d);
+                    lbs.push(d)
+                }
+                // camera
+                const C = {
+                    tx: 0,
+                    ty: .3,
+                    tz: 0,
+                    yaw: .4,
+                    pitch: .55,
+                    rad: 13
+                };
+                let fl = null;
+                const go = o => {
+                    fl = {
+                        a: Object.assign({}, C),
+                        b: Object.assign({}, C, o),
+                        t: performance.now()
+                    }
+                }
+                  , clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+                $('v0').onclick = () => go({
+                    tx: 0,
+                    ty: .3,
+                    tz: 0,
+                    yaw: .4,
+                    pitch: .55,
+                    rad: 13
+                });
+                $('v1').onclick = () => go({
+                    tx: LEDX - .6,
+                    ty: .3,
+                    tz: 0,
+                    yaw: .6,
+                    pitch: .5,
+                    rad: 4.8
+                });
+                $('v2').onclick = () => go({
+                    tx: rx.position.x,
+                    ty: .3,
+                    tz: 0,
+                    yaw: -.5,
+                    pitch: .5,
+                    rad: 4.8
+                });
+                let hl = -1
+                  , paused = false
+                  , vis = true
+                  , raf = 0
+                  , last = 0
+                  , bi = 0
+                  , bt = 0
+                  , flash = 0
+                  , ll = ''
+                  , pd0 = 0;
+                const tmp = new THREE.Color()
+                  , v3 = V(0, 0, 0)
+                  , pt = new Map();
+                window.fly3 = k => {
+                    hl = k;
+                    bh.setFromObject(tg[k]);
+                    bh.visible = true;
+                    tg[k].getWorldPosition(v3);
+                    go({
+                        tx: v3.x,
+                        ty: v3.y + .1,
+                        tz: v3.z,
+                        yaw: .5,
+                        pitch: .6,
+                        rad: 3.2
+                    })
+                }
+                ;
+                const setBp = () => $('bp').textContent = paused ? L[lang].pr : L[lang].pa;
+                $('bp').onclick = () => {
+                    paused = !paused;
+                    setBp()
+                }
+                ;
+                const pinch = () => {
+                    if (pt.size < 2)
+                        return 0;
+                    const a = [...pt.values()];
+                    return Math.hypot(a[0][0] - a[1][0], a[0][1] - a[1][1])
+                }
+                ;
+                cn.onpointerdown = e => {
+                    cn.setPointerCapture(e.pointerId);
+                    pt.set(e.pointerId, [e.clientX, e.clientY]);
+                    fl = null;
+                    pd0 = pinch()
+                }
+                ;
+                cn.onpointermove = e => {
+                    if (!pt.has(e.pointerId))
+                        return;
+                    const p0 = pt.get(e.pointerId);
+                    if (pt.size == 1) {
+                        C.yaw -= (e.clientX - p0[0]) * .008;
+                        C.pitch = clamp(C.pitch + (e.clientY - p0[1]) * .006, .1, 1.45)
+                    }
+                    pt.set(e.pointerId, [e.clientX, e.clientY]);
+                    if (pt.size == 2) {
+                        const d = pinch();
+                        if (pd0 && d)
+                            C.rad = clamp(C.rad * pd0 / d, 2, 22);
+                        pd0 = d
+                    }
+                }
+                ;
+                cn.onpointerup = cn.onpointercancel = e => {
+                    pt.delete(e.pointerId);
+                    pd0 = 0
+                }
+                ;
+                cn.onwheel = e => {
+                    e.preventDefault();
+                    C.rad = clamp(C.rad * Math.exp(e.deltaY * .001), 2, 22)
+                }
+                ;
+                new ResizeObserver( () => {
+                    const w = fr3.clientWidth
+                      , h = fr3.clientHeight;
+                    if (w && h) {
+                        rd.setSize(w, h, false);
+                        cam.aspect = w / h;
+                        cam.updateProjectionMatrix()
+                    }
+                }
+                ).observe(fr3);
+                const isDark = () => {
+                    const t = document.documentElement.dataset.theme;
+                    return t ? t == 'dark' : matchMedia('(prefers-color-scheme:dark)').matches
+                }
+                ;
+                function frame(now) {
+                    raf = 0;
+                    if (!vis || document.hidden)
+                        return;
+                    raf = requestAnimationFrame(frame);
+                    const dt = Math.min(.05, (now - last) / 1000 || 0);
+                    last = now;
+                    const s = S3;
+                    let pdX = pdOf(20);
+                    if (fl) {
+                        const u = (now - fl.t) / 600
+                          , e = u < 1 ? u * u * (3 - 2 * u) : 1;
+                        for (const k in C)
+                            C[k] = fl.a[k] + (fl.b[k] - fl.a[k]) * e;
+                        if (u >= 1)
+                            fl = null
+                    }
+                    if (s) {
+                        const {p, m, k} = s
+                          , l = p.light / 100
+                          , anim = !paused && !rm
+                          , fc = clamp(Math.log10(m.Prx * 1e6 / .2) / Math.log10(4000), 0, 1);
+                        pdX = pdOf(p.d);
+                        rx.position.x = pdX + 1.2;
+                        const bits = R.w && R.w.tx.length ? R.w.tx : [1];
+                        let bit = 1;
+                        if (run && !rm) {
+                            if (anim) {
+                                bt += dt * Math.min(8, p.rate);
+                                if (bt >= 1) {
+                                    bt -= 1;
+                                    bi = (bi + 1) % bits.length;
+                                    if (R.w.er[bi])
+                                        flash = 1
+                                }
+                            }
+                            bit = bits[bi % bits.length]
+                        }
+                        flash *= .9;
+                        rxM.emissive.setRGB(flash * .9, 0, 0);
+                        ledMat.emissiveIntensity = bit ? 1.6 : .05;
+                        ledG.material.opacity = bit ? .9 : 0;
+                        const len = pdX - .06 - (LEDX + .18)
+                          , rE = .12 + len * .1;
+                        beam.scale.set(rE, len, rE);
+                        beam.position.x = LEDX + .18 + len / 2;
+                        beam.material.opacity = (.03 + .2 * fc) * (run && !bit ? .2 : 1);
+                        const n = Math.round(4 + 36 * fc);
+                        for (let i = 0; i < N; i++) {
+                            if (anim) {
+                                pt_[i] += dt * .8;
+                                if (pt_[i] > 1) {
+                                    pt_[i] = 0;
+                                    an[i] = Math.random() * 6.28;
+                                    rr[i] = Math.sqrt(Math.random())
+                                }
+                            }
+                            const t = pt_[i]
+                              , r = (.02 + (rE - .02) * t) * .8;
+                            pa[i * 3] = LEDX + .2 + (len - .02) * t;
+                            pa[i * 3 + 1] = .45 + Math.cos(an[i]) * rr[i] * r;
+                            pa[i * 3 + 2] = Math.sin(an[i]) * rr[i] * r
+                        }
+                        pg.attributes.position.needsUpdate = true;
+                        pg.setDrawRange(0, bit && !rm ? n : 0);
+                        pm.opacity = .3 + .7 * fc;
+                        pdMat.emissiveIntensity = Math.min(1.5, Math.sqrt(Math.max(0, m.Ae) / K.Vsat) * 3);
+                        const sc_ = [0x22cc55, 0xffb000, 0xff3030][k];
+                        stM.color.setHex(sc_);
+                        stM.emissive.setHex(sc_);
+                        amb.intensity = .12 + .55 * l;
+                        pl.intensity = .05 + 1.6 * l;
+                        sp.intensity = 2.4 * l;
+                        bulbM.emissiveIntensity = .1 + 1.5 * l;
+                        sp.target.position.set(pdX, .45, 0);
+                        halo.position.set(pdX - .1, .45, 0);
+                        halo.scale.set(1 + 1.6 * l, 1 + 1.6 * l, 1);
+                        halo.material.opacity = .85 * l;
+                        mark.position.x = pdX;
+                        const dk = isDark();
+                        sc.background.setHex(dk ? 0x020305 : 0x1d2430);
+                        sc.background.lerp(tmp.setHex(dk ? 0x5c6f85 : 0xe6eef7), l);
+                        $('sl3').textContent = run && !rm && p.rate > 8 ? L[lang].slow + fr(p.rate) : '';
+                        lbs[7].textContent = p.d + ' cm';
+                        lbs[7].dataset.x = pdX
+                    }
+                    if (ll !== lang) {
+                        ll = lang;
+                        L[lang].b.forEach( (b, i) => lbs[i].textContent = b[0]);
+                        setBp()
+                    }
+                    const cp = Math.cos(C.pitch);
+                    cam.position.set(C.tx + C.rad * Math.sin(C.yaw) * cp, C.ty + C.rad * Math.sin(C.pitch), C.tz + C.rad * Math.cos(C.yaw) * cp);
+                    cam.lookAt(C.tx, C.ty, C.tz);
+                    if (hl >= 0) {
+                        bh.update();
+                        bh.material.color.setHSL(.14, 1, .5 + .2 * Math.sin(now / 150))
+                    }
+                    rd.render(sc, cam);
+                    const w = fr3.clientWidth
+                      , h = fr3.clientHeight;
+                    for (let i = 0; i < 8; i++) {
+                        if (i < 7) {
+                            tg[i].getWorldPosition(v3);
+                            v3.y += off[i]
+                        } else
+                            v3.set(pdX, .45, 1.45);
+                        v3.project(cam);
+                        const o = lbs[i];
+                        o.style.display = v3.z > 1 ? 'none' : 'block';
+                        o.style.transform = 'translate(' + ((v3.x * .5 + .5) * w) + 'px,' + ((-v3.y * .5 + .5) * h) + 'px) translate(-50%,-100%)'
+                    }
+                }
+                new IntersectionObserver(es => {
+                    vis = es[0].isIntersecting;
+                    if (vis && !raf)
+                        raf = requestAnimationFrame(frame)
+                }
+                ).observe(fr3);
+                document.addEventListener('visibilitychange', () => {
+                    if (!document.hidden && vis && !raf)
+                        raf = requestAnimationFrame(frame)
+                }
+                );
+                raf = requestAnimationFrame(frame)
+            }
+            function patchL() {
+                const o = v => v >= 1e3 ? v / 1e3 + ' kΩ' : v + ' Ω';
+                [['vi', 'chân TX (phát)', 'chân RX (thu, tính BER)', 'Đặt lại camera', ['TỐT', 'CHẤP NHẬN', 'MẤT LIÊN KẾT'], 'Chuột: kéo trái = xoay · kéo phải / Shift+kéo = pan · cuộn = zoom tới con trỏ<br>Cảm ứng: 1 ngón xoay · 2 ngón kéo = pan · chụm = zoom<br>Phím (khi khung 3D được focus): W/A/S/D tiến/trái/lùi/phải · Q/E xuống/lên · mũi tên xoay · +/− zoom · Shift ×3 · R đặt lại · 1/2/3 = Tổng quan/Phát/Thu'], ['en', 'TX pin (transmit)', 'RX pin (receive, BER)', 'Reset camera', ['GOOD', 'ACCEPTABLE', 'LINK LOST'], 'Mouse: left-drag = rotate · right-drag / Shift+drag = pan · wheel = zoom to cursor<br>Touch: 1 finger rotate · 2 fingers pan · pinch zoom<br>Keys (3D view focused): W/A/S/D move · Q/E down/up · arrows rotate · +/− zoom · Shift ×3 · R reset · 1/2/3 = Overview/TX/RX']].forEach( ([g,a,b,r,sg,h]) => {
+                    const B = L[g].b
+                      , Q_ = PARTS;
+                    B[0][0] = 'ESP32 – ' + a;
+                    B[6][0] = 'ESP32 – ' + b;
+                    B[0][2] = Q_.esp + ' (CP2102, USB-C)';
+                    B[6][2] = Q_.esp;
+                    B[1][2] = Q_.npn + ', R base ' + o(Q_.rb) + ', R LED ' + o(Q_.rl);
+                    B[2][2] = Q_.led;
+                    B[3][2] = Q_.pd;
+                    B[4][2] = Q_.amp + ', Rf ' + o(Q_.rf) + ' // ' + Q_.cf;
+                    B[5][2] = Q_.cmp + ', pull-up ' + o(Q_.rpu) + ', Vref 2,5 V';
+                    L[g].v3 = r;
+                    L[g].sg = sg;
+                    L[g].hp = h
+                }
+                )
+            }
+            function init3d2() {
+                if (typeof THREE === 'undefined')
+                    return nogl();
+                let rd;
+                try {
+                    rd = new THREE.WebGLRenderer({
+                        canvas: $('c3'),
+                        antialias: true
+                    });
+                    if (!rd.getContext())
+                        throw 0
+                } catch (e) {
+                    return nogl()
+                }
+                const rm = matchMedia('(prefers-reduced-motion: reduce)').matches
+                  , fr3 = $('f3')
+                  , cn = $('c3')
+                  , PI = Math.PI
+                  , clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+                rd.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+                const sc = new THREE.Scene()
+                  , cam = new THREE.PerspectiveCamera(40,16 / 9,.01,100)
+                  , V = (x, y, z) => new THREE.Vector3(x,y,z);
+                sc.background = new THREE.Color();
+                const M = (c, o) => new THREE.MeshStandardMaterial(Object.assign({
+                    color: c,
+                    roughness: .6,
+                    metalness: .1
+                }, o || {}))
+                  , Ms = M(0xc8ccd0, {
+                    metalness: .9,
+                    roughness: .3
+                });
+                const bx = (w, h, d, m, x, y, z, p) => {
+                    const o = new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
+                    o.position.set(x, y, z);
+                    (p || sc).add(o);
+                    return o
+                }
+                ;
+                const cy = (r, h, m, x, y, z, p, rz) => {
+                    const o = new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,16),m);
+                    o.position.set(x, y, z);
+                    if (rz)
+                        o.rotation.z = rz;
+                    (p || sc).add(o);
+                    return o
+                }
+                ;
+                const gp = (x, y, z, p) => {
+                    const g = new THREE.Group();
+                    g.position.set(x, y, z);
+                    p.add(g);
+                    return g
+                }
+                ;
+                const tx_ = (s, w, h, fg, bg, fs) => {
+                    const c = document.createElement('canvas');
+                    c.width = w;
+                    c.height = h;
+                    const g = c.getContext('2d');
+                    if (bg) {
+                        g.fillStyle = bg;
+                        g.fillRect(0, 0, w, h)
+                    }
+                    g.fillStyle = fg;
+                    g.font = 'bold ' + fs + 'px sans-serif';
+                    g.textAlign = 'center';
+                    g.textBaseline = 'middle';
+                    const a = s.split('\n');
+                    a.forEach( (t, i) => g.fillText(t, w / 2, h * (i + .5) / a.length));
+                    const t = new THREE.CanvasTexture(c);
+                    t.anisotropy = 4;
+                    t.userData = {
+                        g
+                    };
+                    return t
+                }
+                ;
+                const pl_ = (t, w, h, x, y, z, p, rx) => {
+                    const m = new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({
+                        map: t,
+                        transparent: true
+                    }));
+                    m.position.set(x, y, z);
+                    m.rotation.x = rx || 0;
+                    p.add(m);
+                    return m
+                }
+                ;
+                const tube = (pts, c, r) => new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),24,r || .012,6),M(c, {
+                    roughness: .5
+                }));
+                const arc = (p, a, b, h, c) => {
+                    const m = a.clone().lerp(b, .5);
+                    m.y += h;
+                    const t = tube([a, m, b], c);
+                    p.add(t)
+                }
+                ;
+                const gt = ( () => {
+                    const c = document.createElement('canvas');
+                    c.width = c.height = 64;
+                    const g = c.getContext('2d')
+                      , r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+                    r.addColorStop(0, 'rgba(255,255,255,1)');
+                    r.addColorStop(1, 'rgba(255,255,255,0)');
+                    g.fillStyle = r;
+                    g.fillRect(0, 0, 64, 64);
+                    return new THREE.CanvasTexture(c)
+                }
+                )();
+                const spr = (c, s) => {
+                    const o = new THREE.Sprite(new THREE.SpriteMaterial({
+                        map: gt,
+                        color: c,
+                        transparent: true,
+                        blending: THREE.AdditiveBlending,
+                        depthWrite: false
+                    }));
+                    o.scale.set(s, s, 1);
+                    sc.add(o);
+                    return o
+                }
+                ;
+                const LEDX = -4.3
+                  , pdOf = d => LEDX + .6 + (d - 5) / 195 * 7.4
+                  , YEL = 0xf2c200
+                  , GRN = 0x22b04a
+                  , RED = 0xd93025
+                  , BLK = 0x111111
+                  , WHT = 0xdddddd
+                  , bandC = [0x111111, 0x6b3a1a, 0xd02020, 0xf08020, 0xe8d020, 0x30a030, 0x2050d0, 0x8030c0, 0x808080, 0xf0f0f0];
+                function bb(p, w, d, cols) {
+                    const g = gp(0, 0, 0, p);
+                    bx(w, .1, d, M(0xece4cf), 0, .05, 0, g);
+                    bx(w * .96, .004, .14, M(0xb8b09a), 0, .101, 0, g);
+                    bx(w * .94, .006, .014, M(RED), 0, .101, -(d / 2 - .09), g);
+                    bx(w * .94, .006, .014, M(0x2a5bd7), 0, .101, d / 2 - .09, g);
+                    const zs = [];
+                    for (let r = 0; r < 5; r++)
+                        zs.push(.1 + r * .09, -.1 - r * .09);
+                    [-1, 1].forEach(s => zs.push(s * (d / 2 - .17), s * (d / 2 - .26)));
+                    const im = new THREE.InstancedMesh(new THREE.BoxGeometry(.03,.012,.03),M(0x333333),cols * zs.length)
+                      , mx = new THREE.Matrix4();
+                    let n = 0;
+                    for (let c = 0; c < cols; c++)
+                        zs.forEach(z => {
+                            mx.setPosition((c - (cols - 1) / 2) * .09, .1, z);
+                            im.setMatrixAt(n++, mx)
+                        }
+                        );
+                    g.add(im);
+                    return g
+                }
+                function res(p, v, x, z) {
+                    const g = gp(x, .1, z, p)
+                      , e = Math.max(0, Math.floor(Math.log10(v)) - 1)
+                      , mt = Math.round(v / Math.pow(10, e))
+                      , bd = [bandC[mt / 10 | 0], bandC[mt % 10], bandC[e], 0xd4af37];
+                    cy(.032, .2, M(0xd8c3a0), 0, .07, 0, g, PI / 2);
+                    bd.forEach( (c, i) => cy(.036, .016, M(c), -.07 + i * .045, .07, 0, g, PI / 2));
+                    [-1, 1].forEach(s => {
+                        cy(.008, .04, Ms, s * .12, .07, 0, g, PI / 2);
+                        cy(.008, .07, Ms, s * .14, .035, 0, g)
+                    }
+                    );
+                    return g
+                }
+                function capc(p, x, z) {
+                    const g = gp(x, .1, z, p);
+                    cy(.05, .02, M(0xe0a040), 0, .1, 0, g, PI / 2);
+                    cy(.007, .08, Ms, 0, .04, .02, g);
+                    cy(.007, .08, Ms, 0, .04, -.02, g);
+                    return g
+                }
+                function dip(p, nm, x, z) {
+                    const g = gp(x, .1, z, p);
+                    bx(.34, .12, .225, M(0x15171a), 0, .1, 0, g);
+                    for (let i = 0; i < 8; i++) {
+                        const s = i < 4 ? 1 : -1
+                          , xi = i < 4 ? -.135 + i * .09 : .135 - (i - 4) * .09;
+                        bx(.022, .014, .04, Ms, xi, .06, s * .13, g);
+                        bx(.022, .07, .014, Ms, xi, .035, s * .15, g)
+                    }
+                    cy(.03, .004, M(0x35383d), -.12, .162, 0, g);
+                    pl_(tx_(nm, 160, 64, '#e8e8e8', null, 34), .24, .1, .03, .1625, 0, g, -PI / 2);
+                    return g
+                }
+                function npn(p, x, z) {
+                    const g = gp(x, .1, z, p)
+                      , b = new THREE.Mesh(new THREE.CylinderGeometry(.065,.065,.15,16,1,false,0,PI),M(0x15171a));
+                    b.rotation.y = PI / 2;
+                    b.position.set(0, .14, 0);
+                    g.add(b);
+                    pl_(tx_('NPN', 64, 64, '#ddd', null, 26), .1, .1, 0, .14, .003, g);
+                    [-.03, 0, .03].forEach(l => bx(.012, .07, .012, Ms, l, .035, 0, g));
+                    return g
+                }
+                const ledMat = M(0xff9a3a, {
+                    transparent: true,
+                    opacity: .75,
+                    emissive: 0xff8800,
+                    emissiveIntensity: .1,
+                    roughness: .3
+                })
+                  , pdMat = M(0x5a8cff, {
+                    transparent: true,
+                    opacity: .55,
+                    emissive: 0x33ddff,
+                    emissiveIntensity: 0
+                });
+                function led(p, x, z) {
+                    const g = gp(x, .1, z, p);
+                    cy(.007, .27, Ms, 0, .135, .045, g);
+                    cy(.007, .22, Ms, 0, .11, -.045, g);
+                    cy(.105, .025, ledMat, -.14, .23, 0, g, PI / 2);
+                    cy(.09, .28, ledMat, 0, .23, 0, g, PI / 2);
+                    const s = new THREE.Mesh(new THREE.SphereGeometry(.09,16,10),ledMat);
+                    s.position.set(.14, .23, 0);
+                    g.add(s);
+                    bx(.02, .05, .05, M(0xcccccc), -.05, .23, 0, g);
+                    return g
+                }
+                function bpw(p, x, z) {
+                    const g = gp(x, .1, z, p);
+                    bx(.075, .15, .19, pdMat, 0, .23, 0, g);
+                    bx(.02, .09, .09, M(0x0b1b44), 0, .23, 0, g);
+                    cy(.007, .15, Ms, 0, .075, .04, g);
+                    cy(.007, .15, Ms, 0, .075, -.04, g);
+                    return g
+                }
+                const errM = M(0x330000, {
+                    emissive: 0x000000
+                });
+                function esp(p) {
+                    const g = gp(0, 0, 0, p)
+                      , hd = M(0x0d0d0f);
+                    bx(1.8, .03, 1, M(0x16181c), 0, .03, 0, g);
+                    bx(.9, .07, .62, Ms, .15, .085, 0, g);
+                    pl_(tx_('ESP-WROOM-32\nESP32', 256, 128, '#fff', null, 34), .8, .3, .15, .1215, 0, g, -PI / 2);
+                    bx(.3, .012, .62, M(0x0e0f11), .75, .046, 0, g);
+                    for (let i = 0; i < 6; i++)
+                        bx(.2, .008, .035, M(0xc99a3a, {
+                            metalness: .6
+                        }), .72 + (i % 2) * .07, .052, -.25 + i * .1, g);
+                    bx(.3, .08, .26, Ms, -.82, .075, 0, g);
+                    bx(.04, .03, .17, M(0x050505), -.97, .075, 0, g);
+                    [-1, 1].forEach(s => {
+                        bx(.1, .04, .1, Ms, -.55, .065, s * .33, g);
+                        cy(.025, .02, M(0x111111), -.55, .095, s * .33, g)
+                    }
+                    );
+                    bx(.15, .035, .15, M(0x0b0b0c), -.38, .063, -.12, g);
+                    bx(.13, .04, .1, M(0x0b0b0c), -.35, .063, .22, g);
+                    const e = new THREE.Mesh(new THREE.SphereGeometry(.035,12,8),errM);
+                    e.position.set(-.62, .05, 0);
+                    g.add(e);
+                    [-1, 1].forEach(s => bx(1.65, .09, .09, hd, 0, .09, s * .47, g));
+                    const ps = new THREE.InstancedMesh(new THREE.BoxGeometry(.018,.24,.018),Ms,38)
+                      , mx = new THREE.Matrix4();
+                    let n = 0;
+                    [-1, 1].forEach(s => {
+                        for (let i = 0; i < 19; i++) {
+                            mx.setPosition(-.81 + i * .09, 0, s * .47);
+                            ps.setMatrixAt(n++, mx)
+                        }
+                    }
+                    );
+                    g.add(ps);
+                    return g
+                }
+                // table, rail, ruler
+                bx(17, .3, 6, M(0x5b4636), 0, -.15, 0);
+                bx(15, .12, 2.2, M(0x8a8f98, {
+                    metalness: .6
+                }), -.2, .06, 0);
+                const rc = document.createElement('canvas');
+                rc.width = 1024;
+                rc.height = 64;
+                {
+                    const g = rc.getContext('2d');
+                    g.fillStyle = '#e8dcb0';
+                    g.fillRect(0, 0, 1024, 64);
+                    g.fillStyle = g.strokeStyle = '#222';
+                    g.font = 'bold 20px sans-serif';
+                    g.textAlign = 'center';
+                    for (let d = 5; d <= 200; d += 5) {
+                        const x = (d - 5) / 195 * 1022 + 1
+                          , big = d % 25 == 0 || d == 5;
+                        g.beginPath();
+                        g.moveTo(x, 0);
+                        g.lineTo(x, big ? 28 : 14);
+                        g.stroke();
+                        if (big)
+                            g.fillText(d, Math.min(1004, Math.max(18, x)), 52)
+                    }
+                }
+                const rmat = M(0xe8dcb0);
+                bx(7.4, .04, .34, [rmat, rmat, new THREE.MeshBasicMaterial({
+                    map: new THREE.CanvasTexture(rc)
+                }), rmat, rmat, rmat], LEDX + .6 + 3.7, .02, 1.55);
+                const mark = bx(.07, .25, .07, M(RED), 0, .15, 1.55);
+                // STATION: one breadboard with the only ESP32, NPN driver and LED
+                const st = gp(LEDX - 1.6, .12, 0, sc);
+                bb(st, 3.6, 2.2, 38);
+                const E = esp(st);
+                E.position.set(-.85, .2, 0);
+                const mk = (x, z, c) => {
+                    const m = new THREE.Mesh(new THREE.SphereGeometry(.07,12,8),new THREE.MeshBasicMaterial({
+                        color: c,
+                        transparent: true,
+                        opacity: .8,
+                        depthTest: false
+                    }));
+                    m.position.set(x, .15, z);
+                    m.visible = false;
+                    E.add(m);
+                    return m
+                }
+                ;
+                const txMk = mk(.63, -.47, YEL)
+                  , rxMk = mk(.63, .47, GRN)
+                  , vin = new THREE.Object3D()
+                  , gnd = new THREE.Object3D();
+                vin.position.set(-.72, .15, .47);
+                gnd.position.set(-.63, .15, .47);
+                E.add(vin, gnd);
+                const dg = gp(.78, 0, -.5, st);
+                npn(dg, 0, 0);
+                res(dg, PARTS.rb, -.42, 0);
+                res(dg, PARTS.rl, .4, 0);
+                const lg = led(st, 1.6, 0);
+                arc(st, V(-.22, .35, -.47), V(.245, .17, -.5), .15, YEL);
+                arc(st, V(.475, .17, -.5), V(.75, .14, -.5), .1, WHT);
+                arc(st, V(.81, .14, -.5), V(1.015, .17, -.5), .1, WHT);
+                arc(st, V(1.245, .17, -.5), V(1.6, .14, .045), .25, WHT);
+                // RX MODULE: separate small breadboard sliding on the rail
+                const rx = gp(0, .12, 0, sc);
+                bb(rx, 1.8, 1.6, 19);
+                const pg_ = bpw(rx, -.7, 0)
+                  , ag = dip(rx, PARTS.amp, -.2, 0)
+                  , cg = dip(rx, PARTS.cmp, .35, 0);
+                res(rx, PARTS.rf, -.35, .42);
+                capc(rx, -.05, .42);
+                res(rx, PARTS.rdiv, .2, .42);
+                res(rx, PARTS.rdiv, .5, .42);
+                res(rx, PARTS.rpu, .55, -.42);
+                arc(rx, V(-.7, .14, .04), V(-.31, .17, .15), .12, WHT);
+                arc(rx, V(-.07, .17, -.15), V(.215, .17, -.15), .12, WHT);
+                arc(rx, V(.485, .17, .15), V(.8, .14, .1), .15, GRN);
+                [[.1, GRN], [.3, RED], [.5, BLK]].forEach( ([z,c]) => bx(.04, .1, .04, M(c), .8, .15, z, rx));
+                const tR = gp(.15, 0, .97, rx);
+                cy(.03, .6, M(0x333333), 0, .3, 0, tR);
+                bx(.27, .6, .2, M(0x0b0b0d), 0, .9, 0, tR);
+                const tl3 = [0xff3030, 0xffb000, 0x22cc55].map( (c, i) => {
+                    const m = M(c, {
+                        emissive: c,
+                        emissiveIntensity: 0
+                    })
+                      , o = new THREE.Mesh(new THREE.CylinderGeometry(.075,.075,.02,20),m);
+                    o.rotation.x = PI / 2;
+                    o.position.set(0, 1.1 - .2 * i, .105);
+                    tR.add(o);
+                    return {
+                        m,
+                        c
+                    }
+                }
+                );
+                bx(.56, .24, .03, M(0x1a1d23), 0, .42, .03, tR);
+                const sgT = tx_('', 256, 104, '#fff', '#111', 30);
+                pl_(sgT, .52, .2, 0, .42, .0465, tR);
+                let sgK = '';
+                function sign(k, t, b) {
+                    const key = k + t + b;
+                    if (key === sgK)
+                        return;
+                    sgK = key;
+                    const g = sgT.userData.g;
+                    g.fillStyle = '#111';
+                    g.fillRect(0, 0, 256, 104);
+                    g.textAlign = 'center';
+                    g.textBaseline = 'middle';
+                    g.fillStyle = ['#22cc55', '#ffb000', '#ff4040'][k];
+                    g.font = 'bold 32px sans-serif';
+                    g.fillText(t, 128, 32);
+                    g.fillStyle = '#fff';
+                    g.font = '26px sans-serif';
+                    g.fillText('BER ' + b, 128, 74);
+                    sgT.needsUpdate = true
+                }
+                // flexible cables ESP32 -> RX module
+                const cab = [[rxMk, V(.8, .14, .1), GRN, 1.12], [vin, V(.8, .14, .3), RED, 1.2], [gnd, V(.8, .14, .5), BLK, 1.28]].map(a => ({
+                    s: a[0],
+                    e: a[1],
+                    c: a[2],
+                    z: a[3],
+                    m: null
+                }));
+                let dK = -1;
+                function cables(d) {
+                    sc.updateMatrixWorld(true);
+                    const h = .15 + .9 * (1 - (d - 5) / 195);
+                    cab.forEach(o => {
+                        const A = V(0, 0, 0);
+                        o.s.getWorldPosition(A);
+                        const B = rx.localToWorld(o.e.clone())
+                          , dx = B.x - A.x;
+                        if (o.m) {
+                            sc.remove(o.m);
+                            o.m.geometry.dispose()
+                        }
+                        o.m = tube([A, V(A.x, A.y + .3, A.z + .2), V(A.x + dx * .33, .18 + h * .7, o.z), V(A.x + dx * .66, .18 + h * .7, o.z), V(B.x, B.y + .3, B.z + .2), B], o.c, .014);
+                        sc.add(o.m)
+                    }
+                    )
+                }
+                // lights
+                const amb = new THREE.AmbientLight(0xffffff,.2)
+                  , pl = new THREE.PointLight(0xfff4e0,.5,40);
+                pl.position.set(0, 3.6, 1.5);
+                const sp = new THREE.SpotLight(0xfff0d0,0,30,.7,.6);
+                sp.position.set(2, 3, -2.5);
+                sc.add(amb, pl, sp, sp.target);
+                const bulbM = M(0xffffff, {
+                    emissive: 0xfff0c0,
+                    emissiveIntensity: .1
+                });
+                cy(.5, .08, M(0x888888), 0, 4, 0, sc);
+                {
+                    const b = new THREE.Mesh(new THREE.SphereGeometry(.22,16,12),bulbM);
+                    b.position.set(0, 3.8, 0);
+                    sc.add(b)
+                }
+                cy(.04, 2.6, M(0x555555), 2.4, 1.3, -2.8, sc);
+                {
+                    const c = new THREE.Mesh(new THREE.ConeGeometry(.35,.5,16),M(0x2a6f9e));
+                    c.position.set(2, 3, -2.5);
+                    c.rotation.z = .5;
+                    sc.add(c)
+                }
+                const halo = spr(0xfff0b0, 1)
+                  , ledG = spr(0xffaa33, .7);
+                ledG.position.set(LEDX + .25, .45, 0);
+                const beam = new THREE.Mesh(new THREE.CylinderGeometry(1,.1,1,24,1,true),new THREE.MeshBasicMaterial({
+                    color: 0xffd24a,
+                    transparent: true,
+                    opacity: .1,
+                    depthWrite: false,
+                    blending: THREE.AdditiveBlending,
+                    side: THREE.DoubleSide
+                }));
+                beam.rotation.z = -PI / 2;
+                beam.position.y = .45;
+                sc.add(beam);
+                const N = 40
+                  , pg = new THREE.BufferGeometry()
+                  , pa = new Float32Array(N * 3)
+                  , pt_ = []
+                  , an = []
+                  , rr = [];
+                for (let i = 0; i < N; i++) {
+                    pt_.push(Math.random());
+                    an.push(Math.random() * 6.28);
+                    rr.push(Math.sqrt(Math.random()))
+                }
+                pg.setAttribute('position', new THREE.BufferAttribute(pa,3));
+                const pm = new THREE.PointsMaterial({
+                    size: .07,
+                    color: 0xffe680,
+                    transparent: true,
+                    opacity: .9,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                })
+                  , pts = new THREE.Points(pg,pm);
+                pts.frustumCulled = false;
+                sc.add(pts);
+                const tg = [E, dg, lg, pg_, ag, cg, E]
+                  , anc = [txMk, dg, lg, pg_, ag, cg, rxMk]
+                  , off = [.5, .5, .8, .35, .7, 1.05, .5]
+                  , bh = new THREE.BoxHelper(dg,0xffee55);
+                bh.visible = false;
+                sc.add(bh);
+                const lbs = [];
+                for (let i = 0; i < 8; i++) {
+                    const d = document.createElement('div');
+                    d.className = 'lb';
+                    $('lb').appendChild(d);
+                    lbs.push(d)
+                }
+                // free camera (target + yaw/pitch/radius, damped)
+                const HOME = {
+                    tx: 0,
+                    ty: .3,
+                    tz: 0,
+                    yaw: .4,
+                    pitch: .55,
+                    rad: 13
+                }
+                  , C = Object.assign({}, HOME)
+                  , D = Object.assign({}, HOME);
+                let fl = null;
+                const bs = o => {
+                    const sy = Math.sin(o.yaw)
+                      , cy_ = Math.cos(o.yaw)
+                      , sp_ = Math.sin(o.pitch)
+                      , cp = Math.cos(o.pitch);
+                    return {
+                        r: V(cy_, 0, -sy),
+                        u: V(-sy * sp_, cp, -cy_ * sp_),
+                        f: V(-sy * cp, -sp_, -cy_ * cp)
+                    }
+                }
+                ;
+                const go = o => {
+                    fl = {
+                        a: Object.assign({}, C),
+                        b: Object.assign({}, D, o),
+                        t: performance.now()
+                    }
+                }
+                ;
+                const mv = (v, s) => {
+                    D.tx += v.x * s;
+                    D.ty += v.y * s;
+                    D.tz += v.z * s
+                }
+                ;
+                const rot = (dx, dy) => {
+                    D.yaw -= dx * .006;
+                    D.pitch = clamp(D.pitch + dy * .005, -.2, 1.5)
+                }
+                ;
+                const pan = (dx, dy) => {
+                    const b = bs(D)
+                      , s = D.rad * 2 * Math.tan(cam.fov * PI / 360) / fr3.clientHeight;
+                    mv(b.r, -dx * s);
+                    mv(b.u, dy * s)
+                }
+                ;
+                const zoomAt = (f, cx, cy_) => {
+                    const r = cn.getBoundingClientRect()
+                      , nx = (cx - r.left) / r.width * 2 - 1
+                      , ny = -((cy_ - r.top) / r.height) * 2 + 1
+                      , t = Math.tan(cam.fov * PI / 360)
+                      , b = bs(D)
+                      , nr = clamp(D.rad * f, .15, 40)
+                      , k = 1 - nr / D.rad;
+                    mv(b.r, nx * t * cam.aspect * D.rad * k);
+                    mv(b.u, ny * t * D.rad * k);
+                    D.rad = nr
+                }
+                ;
+                const txX = () => LEDX - .6
+                  , preset = i => go(i == 0 ? HOME : i == 1 ? {
+                    tx: txX(),
+                    ty: .3,
+                    tz: 0,
+                    yaw: .6,
+                    pitch: .5,
+                    rad: 4.8
+                } : {
+                    tx: rx.position.x,
+                    ty: .3,
+                    tz: 0,
+                    yaw: -.5,
+                    pitch: .5,
+                    rad: 4.8
+                });
+                $('v0').onclick = () => preset(0);
+                $('v1').onclick = () => preset(1);
+                $('v2').onclick = () => preset(2);
+                $('v3').onclick = () => go(HOME);
+                $('bq').onclick = () => {
+                    $('hp').hidden = !$('hp').hidden
+                }
+                ;
+                let hl = -1
+                  , paused = false
+                  , vis = true
+                  , raf = 0
+                  , last = 0
+                  , bi = 0
+                  , bt = 0
+                  , flash = 0
+                  , ll = ''
+                  , g0 = null
+                  , sh = false
+                  , tk = '';
+                const v3 = V(0, 0, 0)
+                  , tmp = new THREE.Color()
+                  , pt = new Map()
+                  , keys = new Set()
+                  , KS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Equal', 'NumpadAdd', 'Minus', 'NumpadSubtract'];
+                window.fly3 = k => {
+                    sc.updateMatrixWorld(true);
+                    anc[k == 0 || k == 6 ? k : k].getWorldPosition(v3);
+                    hl = k;
+                    bh.visible = k > 0 && k < 6;
+                    if (bh.visible)
+                        bh.setFromObject(tg[k]);
+                    go({
+                        tx: v3.x,
+                        ty: v3.y,
+                        tz: v3.z,
+                        yaw: .5,
+                        pitch: .6,
+                        rad: k == 0 || k == 6 ? 1.3 : 1
+                    })
+                }
+                ;
+                const setBp = () => $('bp').textContent = paused ? L[lang].pr : L[lang].pa;
+                $('bp').onclick = () => {
+                    paused = !paused;
+                    setBp()
+                }
+                ;
+                const gest = () => {
+                    if (pt.size < 2)
+                        return null;
+                    const a = [...pt.values()];
+                    return {
+                        d: Math.hypot(a[0][0] - a[1][0], a[0][1] - a[1][1]),
+                        x: (a[0][0] + a[1][0]) / 2,
+                        y: (a[0][1] + a[1][1]) / 2
+                    }
+                }
+                ;
+                cn.oncontextmenu = e => e.preventDefault();
+                cn.onpointerdown = e => {
+                    cn.focus({
+                        preventScroll: true
+                    });
+                    cn.setPointerCapture(e.pointerId);
+                    pt.set(e.pointerId, [e.clientX, e.clientY]);
+                    fl = null;
+                    g0 = gest()
+                }
+                ;
+                cn.onpointermove = e => {
+                    if (!pt.has(e.pointerId))
+                        return;
+                    const p0 = pt.get(e.pointerId)
+                      , dx = e.clientX - p0[0]
+                      , dy = e.clientY - p0[1];
+                    if (pt.size == 1) {
+                        if (e.pointerType == 'mouse' && ((e.buttons & 2) || e.shiftKey))
+                            pan(dx, dy);
+                        else
+                            rot(dx, dy)
+                    }
+                    pt.set(e.pointerId, [e.clientX, e.clientY]);
+                    if (pt.size == 2) {
+                        const g = gest();
+                        if (g0 && g.d) {
+                            pan(g.x - g0.x, g.y - g0.y);
+                            zoomAt(g0.d / g.d, g.x, g.y)
+                        }
+                        g0 = g
+                    }
+                }
+                ;
+                cn.onpointerup = cn.onpointercancel = e => {
+                    pt.delete(e.pointerId);
+                    g0 = null
+                }
+                ;
+                cn.onwheel = e => {
+                    e.preventDefault();
+                    fl = null;
+                    zoomAt(Math.exp(e.deltaY * .0015), e.clientX, e.clientY)
+                }
+                ;
+                cn.onkeydown = e => {
+                    sh = e.shiftKey;
+                    const c = e.code;
+                    if (c == 'KeyR')
+                        go(HOME);
+                    else if (c == 'Digit1')
+                        preset(0);
+                    else if (c == 'Digit2')
+                        preset(1);
+                    else if (c == 'Digit3')
+                        preset(2);
+                    else if (KS.includes(c)) {
+                        fl = null;
+                        keys.add(c)
+                    } else
+                        return;
+                    e.preventDefault()
+                }
+                ;
+                cn.onkeyup = e => {
+                    sh = e.shiftKey;
+                    keys.delete(e.code)
+                }
+                ;
+                cn.onblur = () => keys.clear();
+                new ResizeObserver( () => {
+                    const w = fr3.clientWidth
+                      , h = fr3.clientHeight;
+                    if (w && h) {
+                        rd.setSize(w, h, false);
+                        cam.aspect = w / h;
+                        cam.updateProjectionMatrix()
+                    }
+                }
+                ).observe(fr3);
+                const mq = matchMedia('(orientation: landscape) and (min-width: 700px)')
+                  , place = () => {
+                    const m = document.querySelector('main');
+                    mq.matches ? m.insertBefore($('lc'), $('rc')) : $('slot').appendChild($('lc'))
+                }
+                ;
+                mq.addEventListener('change', place);
+                place();
+                const isDark = () => {
+                    const t = document.documentElement.dataset.theme;
+                    return t ? t == 'dark' : matchMedia('(prefers-color-scheme:dark)').matches
+                }
+                ;
+                function frame(now) {
+                    raf = 0;
+                    if (!vis || document.hidden)
+                        return;
+                    raf = requestAnimationFrame(frame);
+                    const dt = Math.min(.05, (now - last) / 1000 || 0);
+                    last = now;
+                    const s = S3;
+                    let pdX = pdOf(20);
+                    if (fl) {
+                        const u = (now - fl.t) / 600
+                          , e = u < 1 ? u * u * (3 - 2 * u) : 1;
+                        for (const k in C) {
+                            C[k] = fl.a[k] + (fl.b[k] - fl.a[k]) * e;
+                            D[k] = C[k]
+                        }
+                        if (u >= 1)
+                            fl = null
+                    } else {
+                        if (keys.size) {
+                            const b = bs(D)
+                              , sp_ = Math.max(1.2, D.rad) * .8 * dt * (sh ? 3 : 1);
+                            if (keys.has('KeyW'))
+                                mv(b.f, sp_);
+                            if (keys.has('KeyS'))
+                                mv(b.f, -sp_);
+                            if (keys.has('KeyD'))
+                                mv(b.r, sp_);
+                            if (keys.has('KeyA'))
+                                mv(b.r, -sp_);
+                            if (keys.has('KeyE'))
+                                D.ty += sp_;
+                            if (keys.has('KeyQ'))
+                                D.ty -= sp_;
+                            if (keys.has('ArrowLeft'))
+                                D.yaw += 1.6 * dt;
+                            if (keys.has('ArrowRight'))
+                                D.yaw -= 1.6 * dt;
+                            if (keys.has('ArrowUp'))
+                                D.pitch = clamp(D.pitch - 1.2 * dt, -.2, 1.5);
+                            if (keys.has('ArrowDown'))
+                                D.pitch = clamp(D.pitch + 1.2 * dt, -.2, 1.5);
+                            if (keys.has('Equal') || keys.has('NumpadAdd'))
+                                D.rad = clamp(D.rad * Math.exp(-1.5 * dt), .15, 40);
+                            if (keys.has('Minus') || keys.has('NumpadSubtract'))
+                                D.rad = clamp(D.rad * Math.exp(1.5 * dt), .15, 40)
+                        }
+                        D.ty = clamp(D.ty, .02, 8);
+                        const a = 1 - Math.exp(-dt * 12);
+                        for (const k in C)
+                            C[k] += (D[k] - C[k]) * a
+                    }
+                    if (s) {
+                        const {p, m, k} = s
+                          , l = p.light / 100
+                          , anim = !paused && !rm
+                          , fc = clamp(Math.log10(m.Prx * 1e6 / .2) / Math.log10(4000), 0, 1);
+                        pdX = pdOf(p.d);
+                        rx.position.x = pdX + .7;
+                        if (dK !== p.d) {
+                            dK = p.d;
+                            cables(p.d)
+                        }
+                        const bits = R.w && R.w.tx.length ? R.w.tx : [1];
+                        let bit = 1;
+                        if (run && !rm) {
+                            if (anim) {
+                                bt += dt * Math.min(8, p.rate);
+                                if (bt >= 1) {
+                                    bt -= 1;
+                                    bi = (bi + 1) % bits.length;
+                                    if (R.w.er[bi])
+                                        flash = 1
+                                }
+                            }
+                            bit = bits[bi % bits.length]
+                        }
+                        flash *= .9;
+                        errM.emissive.setRGB(flash, 0, 0);
+                        errM.color.setRGB(.2 + flash * .8, 0, 0);
+                        ledMat.emissiveIntensity = bit ? 1.6 : .05;
+                        ledG.material.opacity = bit ? .9 : 0;
+                        const x0 = LEDX + .25
+                          , len = pdX - .045 - x0
+                          , rE = .12 + len * .1;
+                        beam.scale.set(rE, len, rE);
+                        beam.position.x = x0 + len / 2;
+                        beam.material.opacity = (.03 + .2 * fc) * (run && !bit ? .2 : 1);
+                        for (let i = 0; i < N; i++) {
+                            if (anim) {
+                                pt_[i] += dt * .8;
+                                if (pt_[i] > 1) {
+                                    pt_[i] = 0;
+                                    an[i] = Math.random() * 6.28;
+                                    rr[i] = Math.sqrt(Math.random())
+                                }
+                            }
+                            const t = pt_[i]
+                              , r = (.02 + (rE - .02) * t) * .8;
+                            pa[i * 3] = x0 + len * t;
+                            pa[i * 3 + 1] = .45 + Math.cos(an[i]) * rr[i] * r;
+                            pa[i * 3 + 2] = Math.sin(an[i]) * rr[i] * r
+                        }
+                        pg.attributes.position.needsUpdate = true;
+                        pg.setDrawRange(0, bit && !rm ? Math.round(4 + 36 * fc) : 0);
+                        pm.opacity = .3 + .7 * fc;
+                        pdMat.emissiveIntensity = Math.min(1.5, Math.sqrt(Math.max(0, m.Ae) / K.Vsat) * 3);
+                        tl3.forEach( (o, i) => {
+                            const on = 2 - i == k;
+                            o.m.emissiveIntensity = on ? 1.6 : 0;
+                            o.m.color.setHex(o.c).multiplyScalar(on ? 1 : .18)
+                        }
+                        );
+                        const T = L[lang]
+                          , key = k + lang + fb(m.th);
+                        if (key !== tk) {
+                            tk = key;
+                            sign(k, T.sg[k], fb(m.th));
+                            $('tlt').textContent = T.sg[k];
+                            qa('#tl span').forEach( (e, i) => e.style.background = 2 - i == k ? ['#ff3030', '#ffb000', '#22cc55'][i] : '#3a3a3a')
+                        }
+                        amb.intensity = .12 + .55 * l;
+                        pl.intensity = .05 + 1.6 * l;
+                        sp.intensity = 2.4 * l;
+                        bulbM.emissiveIntensity = .1 + 1.5 * l;
+                        sp.target.position.set(pdX, .45, 0);
+                        halo.position.set(pdX - .1, .45, 0);
+                        halo.scale.set(1 + 1.6 * l, 1 + 1.6 * l, 1);
+                        halo.material.opacity = .85 * l;
+                        mark.position.x = pdX;
+                        const dk = isDark();
+                        sc.background.setHex(dk ? 0x020305 : 0x1d2430);
+                        sc.background.lerp(tmp.setHex(dk ? 0x5c6f85 : 0xe6eef7), l);
+                        $('sl3').textContent = run && !rm && p.rate > 8 ? T.slow + fr(p.rate) : '';
+                        lbs[7].textContent = p.d + ' cm'
+                    }
+                    if (ll !== lang) {
+                        ll = lang;
+                        L[lang].b.forEach( (b, i) => lbs[i].textContent = b[0]);
+                        setBp();
+                        $('hp').innerHTML = L[lang].hp;
+                        tk = ''
+                    }
+                    const b = bs(C)
+                      , cp = Math.cos(C.pitch);
+                    cam.position.set(C.tx + C.rad * Math.sin(C.yaw) * cp, C.ty + C.rad * Math.sin(C.pitch), C.tz + C.rad * Math.cos(C.yaw) * cp);
+                    if (cam.position.y < .06)
+                        cam.position.y = .06;
+                    cam.lookAt(C.tx, C.ty, C.tz);
+                    const pu = 1 + .3 * Math.sin(now / 120);
+                    txMk.visible = hl == 0;
+                    rxMk.visible = hl == 6;
+                    txMk.scale.setScalar(pu);
+                    rxMk.scale.setScalar(pu);
+                    if (bh.visible) {
+                        bh.update();
+                        bh.material.color.setHSL(.14, 1, .5 + .2 * Math.sin(now / 150))
+                    }
+                    rd.render(sc, cam);
+                    const w = fr3.clientWidth
+                      , h = fr3.clientHeight
+                      , fa = clamp((C.rad - .5) / 1.5, 0, 1);
+                    for (let i = 0; i < 8; i++) {
+                        if (i < 7) {
+                            anc[i].getWorldPosition(v3);
+                            v3.y += off[i]
+                        } else
+                            v3.set(pdX, .45, 1.55);
+                        v3.project(cam);
+                        const o = lbs[i];
+                        o.style.display = v3.z > 1 ? 'none' : 'block';
+                        o.style.opacity = i < 7 ? fa : 1;
+                        o.style.transform = 'translate(' + ((v3.x * .5 + .5) * w) + 'px,' + ((-v3.y * .5 + .5) * h) + 'px) translate(-50%,-100%)'
+                    }
+                }
+                new IntersectionObserver(es => {
+                    vis = es[0].isIntersecting;
+                    if (vis && !raf)
+                        raf = requestAnimationFrame(frame)
+                }
+                ).observe(fr3);
+                document.addEventListener('visibilitychange', () => {
+                    if (!document.hidden && vis && !raf)
+                        raf = requestAnimationFrame(frame)
+                }
+                );
+                raf = requestAnimationFrame(frame)
+            }
+            patchL();
+            lang_();
+            upd();
+            diag();
+            init3d2();
+        </script>
+    </body>
+</html>
