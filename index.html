@@ -3,15 +3,26 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+        <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
         <title>OCT – Optical Communication Tester</title>
         <style>
             :root {
-                --bg: #f4f6f9;
-                --fg: #1b1f24;
+                --bg-from: #dbeafe;
+                --bg-to: #ffffff;
+                --accent: #1d6bf3;
+                --accent-dark: #1050c8;
+                --border: #d5deec;
+                --text: #0f172a;
+                --text-muted: #475569;
+                --badge-bg: #dbeafe;
+                --badge-text: #0f3fa8;
+                --shadow: 0 8px 24px rgba(29,107,243,.08);
+                --bg: #f4f8ff;
+                --fg: #0f172a;
                 --card: #fff;
-                --mut: #5c6670;
-                --bd: #d9dee4;
-                --ac: #0a6cff;
+                --mut: #475569;
+                --bd: #d5deec;
+                --ac: #1d6bf3;
                 --ok: #16883f;
                 --wa: #c27a00;
                 --bad: #d93025;
@@ -62,9 +73,10 @@
 
             body {
                 margin: 0;
-                background: var(--bg);
+                background: linear-gradient(135deg,var(--bg-from) 0%,var(--bg-to) 70%) fixed;
+                min-height: 100vh;
                 color: var(--fg);
-                font: 15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif
+                font: 15px/1.5 Nunito,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif
             }
 
             main {
@@ -83,6 +95,7 @@
 
             h1 {
                 font-size: 1.4rem;
+                font-weight: 800;
                 margin: 4px 0
             }
 
@@ -97,20 +110,23 @@
             }
 
             .note {
-                background: color-mix(in srgb,var(--wa) 14%,transparent);
-                border: 1px solid var(--wa);
-                border-radius: 8px;
-                padding: 8px 10px;
+                background: var(--badge-bg);
+                border: 1px solid color-mix(in srgb,var(--accent) 28%,transparent);
+                color: var(--badge-text);
+                border-radius: 14px;
+                padding: 8px 12px;
                 margin: 10px 0;
-                font-size: .9rem
+                font-size: .9rem;
+                font-weight: 600
             }
 
             .card {
                 background: var(--card);
                 border: 1px solid var(--bd);
-                border-radius: 10px;
-                padding: 12px;
-                margin: 12px 0
+                border-radius: 18px;
+                padding: 14px;
+                margin: 12px 0;
+                box-shadow: var(--shadow)
             }
 
             .g2 {
@@ -134,20 +150,26 @@
                 background: var(--card);
                 color: var(--fg);
                 border: 1px solid var(--bd);
-                border-radius: 8px;
-                padding: 6px 12px;
-                cursor: pointer
+                border-radius: 999px;
+                padding: 6px 14px;
+                cursor: pointer;
+                font-weight: 600
             }
 
             button.p {
-                background: var(--ac);
+                background: var(--accent);
                 color: #fff;
-                border-color: var(--ac)
+                font-weight: 800;
+                border-radius: 16px;
+                border: 1px solid var(--accent);
+                border-bottom: 4px solid var(--accent-dark);
+                padding: 6px 18px 4px
             }
 
             button.sel {
                 border-color: var(--ac);
-                outline: 2px solid var(--ac)
+                outline: 2px solid var(--ac);
+                outline-offset: -2px
             }
 
             .blocks {
@@ -571,6 +593,46 @@
                 }
             }
 
+            input[type=range] {
+                accent-color: var(--ac)
+            }
+
+            @media(prefers-color-scheme: dark) {
+                :root:not([data-theme="light"]) {
+                    --bg-from:#171c24;
+                    --bg-to: #0f1318;
+                    --accent: #5b9bff;
+                    --accent-dark: #2f6fd8;
+                    --border: #2f3742;
+                    --text: #e6e9ee;
+                    --text-muted: #9aa5b1;
+                    --badge-bg: #1f3558;
+                    --badge-text: #a8c8ff;
+                    --shadow: none
+                }
+
+                :root:not([data-theme="light"]) button.p {
+                    color: #06101f
+                }
+            }
+
+            :root[data-theme="dark"] {
+                --bg-from: #171c24;
+                --bg-to: #0f1318;
+                --accent: #5b9bff;
+                --accent-dark: #2f6fd8;
+                --border: #2f3742;
+                --text: #e6e9ee;
+                --text-muted: #9aa5b1;
+                --badge-bg: #1f3558;
+                --badge-text: #a8c8ff;
+                --shadow: none
+            }
+
+            :root[data-theme="dark"] button.p {
+                color: #06101f
+            }
+
             footer {
                 color: var(--mut);
                 font-size: .85rem;
@@ -787,8 +849,7 @@ Q(z) = ½·erfc(z/√2);  PRBS15: count TX≠RX bits</pre>-->
                 <footer>
                     <div data-i="foot"></div>
                     <div>
-                        Trần Thị Phương Anh (202514639) · Nguyễn Trọng Nghĩa (202514719) · <span data-i="gv"></span>
-                        · 176181
+                        Trần Thị Phương Anh (202514639) · Nguyễn Trọng Nghĩa (202514719) · <span data-i="gv"></span> · 176181
                     </div>
                 </footer>
             </div>
@@ -830,6 +891,17 @@ Q(z) = ½·erfc(z/√2);  PRBS15: count TX≠RX bits</pre>-->
                 rpu: 1e4,
                 cf: '100 pF'
             };
+            // ===== 3D LOOK TUNING =====
+            const LED_GLOW_SCALE = .5;
+            // LED glow sprite size/opacity multiplier (1 = old look)
+            const LED_EMISSIVE = .8;
+            // LED body emissiveIntensity when lit
+            const BEAM_OPACITY = .72;
+            // beam cone + dust opacity multiplier
+            const LAMP_MAX_INTENSITY = 3.9;
+            // desk lamp SpotLight intensity at 100% light
+            const SCENE_EXPOSURE = .86;
+            // renderer toneMappingExposure
             const kB = 1.38e-23
               , q = 1.602e-19
               , OS = 8
@@ -2086,7 +2158,7 @@ Q(z) = ½·erfc(z/√2);  PRBS15: count TX≠RX bits</pre>-->
                 rd.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
                 rd.outputEncoding = THREE.sRGBEncoding;
                 rd.toneMapping = THREE.ACESFilmicToneMapping;
-                const EXPO = .95;
+                const EXPO = SCENE_EXPOSURE;
                 rd.toneMappingExposure = EXPO;
                 rd.shadowMap.enabled = true;
                 rd.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -3152,14 +3224,16 @@ Q(z) = ½·erfc(z/√2);  PRBS15: count TX≠RX bits</pre>-->
                         flash *= .9;
                         errM.emissive.setRGB(flash, 0, 0);
                         errM.color.setRGB(.2 + flash * .8, 0, 0);
-                        ledMat.emissiveIntensity = bit ? 1.6 : .05;
-                        ledG.material.opacity = bit ? .9 : 0;
+                        const gf = clamp((C.rad - .15) / 2, .2, 1);
+                        ledMat.emissiveIntensity = bit ? LED_EMISSIVE : .05;
+                        ledG.material.opacity = bit ? .9 * LED_GLOW_SCALE * gf : 0;
+                        ledG.scale.setScalar(.7 * LED_GLOW_SCALE * gf);
                         const x0 = LEDX + .25
                           , len = pdX - .045 - x0
                           , rE = .12 + len * .1;
                         beam.scale.set(rE, len, rE);
                         beam.position.x = x0 + len / 2;
-                        beam.material.opacity = (.03 + .2 * fc) * (run && !bit ? .2 : 1);
+                        beam.material.opacity = (.03 + .2 * fc) * (run && !bit ? .2 : 1) * BEAM_OPACITY;
                         for (let i = 0; i < N; i++) {
                             if (anim) {
                                 pt_[i] += dt * .8;
@@ -3177,7 +3251,7 @@ Q(z) = ½·erfc(z/√2);  PRBS15: count TX≠RX bits</pre>-->
                         }
                         pg.attributes.position.needsUpdate = true;
                         pg.setDrawRange(0, bit && !rm ? Math.round(4 + 36 * fc) : 0);
-                        pm.opacity = .3 + .7 * fc;
+                        pm.opacity = (.3 + .7 * fc) * BEAM_OPACITY;
                         pdMat.emissiveIntensity = Math.min(1.5, Math.sqrt(Math.max(0, m.Ae) / K.Vsat) * 3);
                         tl3.forEach( (o, i) => {
                             const on = 2 - i == k;
@@ -3209,12 +3283,13 @@ Q(z) = ½·erfc(z/√2);  PRBS15: count TX≠RX bits</pre>-->
                         lbs[7].textContent = p.d + ' cm';
                         amb.intensity = .08 + .15 * l;
                         pl.intensity = .03 + .3 * l;
-                        sp.intensity = 4.6 * l;
+                        sp.intensity = LAMP_MAX_INTENSITY * l;
                         hemi.intensity = .28 + .15 * l;
                         dir.intensity = .12 + .08 * l;
                         bulbN.emissiveIntensity = 2.4 * l;
-                        sc.background.setHex(dk ? 0x151b23 : 0x2f3a49).lerp(tmp.setHex(dk ? 0x74879c : 0xa9b8c9), l);
-                        bulbG.material.opacity = .9 * l;
+                        sc.background.setHex(dk ? 0x151b23 : 0x6f86a8).lerp(tmp.setHex(dk ? 0x74879c : 0xdbe8fb), l);
+                        wall.material.color.setHex(dk ? 0x9aa4b0 : 0xc6d6ee);
+                        bulbG.material.opacity = .74 * l;
                         bulbG.visible = l > .02
                     }
                     if (ll !== lang) {
